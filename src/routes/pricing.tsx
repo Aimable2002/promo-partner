@@ -90,7 +90,16 @@ function Pricing() {
                   ))}
                 </ul>
                 <Button asChild className="mt-7" variant="outline">
-                  <Link to="/checkout">Get started</Link>
+                  <Link
+                    to="/checkout"
+                    search={{
+                      purpose: "package",
+                      package_code: p.code,
+                      amount_usd: packagePrice(p),
+                    }}
+                  >
+                    Get started
+                  </Link>
                 </Button>
               </div>
             ))}
