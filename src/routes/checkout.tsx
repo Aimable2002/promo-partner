@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Lock, Smartphone } from "lucide-react";
+import { Lock, Smartphone, Ticket } from "lucide-react";
 import { toast } from "sonner";
 import { Logo } from "@/components/brand";
 import { Button } from "@/components/ui/button";
