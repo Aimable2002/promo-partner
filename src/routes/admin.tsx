@@ -22,8 +22,15 @@ import {
 } from "@/components/ui/table";
 import { ApiError, endpoints } from "@/lib/api";
 import { supabase, type ChallengeRow } from "@/lib/supabase";
+import {
+  createPromoCodes,
+  deletePromoCode,
+  fetchPromoCodes,
+  setPromoActive,
+  type PromoCodeRow,
+} from "@/lib/promo";
 import { fmtDate, fmtMoney } from "@/lib/format";
-import { useRequireAdmin } from "@/hooks/use-copydesk";
+import { useRequireAdmin, usePackages } from "@/hooks/use-copydesk";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
