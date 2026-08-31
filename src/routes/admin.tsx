@@ -482,6 +482,10 @@ function Admin() {
           )}
         </TabsContent>
 
+        <TabsContent value="promos" className="mt-5">
+          <PromoCodesPanel />
+        </TabsContent>
+
         <TabsContent value="analytics" className="mt-5">
           {topMastersQuery.isError ? (
             <div className="panel p-6 text-sm text-destructive">Could not load analytics.</div>
