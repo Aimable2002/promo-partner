@@ -283,6 +283,21 @@ function WalletPage() {
                         >
                           {isCurrent ? "Current plan" : `Switch to ${packageName(p)}`}
                         </Button>
+                        {!isCurrent && (
+                          <Button asChild variant="ghost" size="sm" className="mt-2">
+                            <Link
+                              to="/checkout"
+                              search={{
+                                purpose: "package",
+                                package_code: p.code,
+                                amount_usd: packagePrice(p),
+                              }}
+                            >
+                              Pay or use a promo code
+                            </Link>
+                          </Button>
+                        )}
+
                       </div>
                     );
                   })}
