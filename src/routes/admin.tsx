@@ -531,3 +531,245 @@ function Field({ k, v }: { k: string; v: string }) {
     </div>
   );
 }
+
+/* --------------------------------------------------------- promo codes */
+
+function PromoCodesPanel() {
+  const queryClient = useQueryClient();
+  const { data: packages = [] } = usePackages();
+  const [quantity, setQuantity] = useState(1);
+  const [prefix, setPrefix] = useState("CD");
+  const [discount, setDiscount] = useState(100);
+  const [packageCode, setPackageCode] = useState("any");
+  const [note, setNote] = useState("");
+  const [expiresAt, setExpiresAt] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [lastBatch, setLastBatch] = useState<PromoCodeRow[]>([]);
+
+  const promosQuery = useQuery({ queryKey: ["admin-promo-codes"], queryFn: fetchPromoCodes });
+  const promos = promosQuery.data ?? [];
+  const unusedCount = promos.filter((p) => !p.redeemed_at && p.is_active).length;
+
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["admin-promo-codes"] });
+
+  const create = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreating(true);
+    try {
+      const rows = await createPromoCodes({
+        quantity,
+        prefix,
+        discount_percent: Math.min(100, Math.max(1, discount)),
+        package_code: packageCode === "any" ? null : packageCode,
+        note: note.trim() || null,
+        expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+      });
+      setLastBatch(rows);
+      setNote("");
+      toast.success(`${rows.length} promo code${rows.length === 1 ? "" : "s"} generated`);
+      refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not generate promo codes");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const copy = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      toast.success(`Copied ${code}`);
+    } catch {
+      toast.error("Could not copy");
+    }
+  };
+
+  const toggle = async (p: PromoCodeRow) => {
+    try {
+      await setPromoActive(p.id, !p.is_active);
+      refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not update promo code");
+    }
+  };
+
+  const remove = async (p: PromoCodeRow) => {
+    try {
+      await deletePromoCode(p.id);
+      toast.success(`Deleted ${p.code}`);
+      refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not delete promo code");
+    }
+  };
+
+  return (
+    <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <Badge variant="outline">{promos.length} total</Badge>
+          <Badge variant="outline">{unusedCount} available</Badge>
+          <Badge variant="outline">{promos.filter((p) => p.redeemed_at).length} used</Badge>
+        </div>
+
+        {promosQuery.isError ? (
+          <div className="panel p-6 text-sm text-destructive">
+            Could not load promo codes. Make sure the `promo_codes` table exists (see
+            supabase/promo_codes.sql).
+          </div>
+        ) : (
+          <div className="panel overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Discount</TableHead>
+                  <TableHead>Plan</TableHead>
+                  <TableHead>Expires</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Used</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {promosQuery.isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-sm text-muted-foreground">
+                      Loading…
+                    </TableCell>
+                  </TableRow>
+                ) : promos.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-sm text-muted-foreground">
+                      No promo codes yet.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  promos.map((p) => {
+                    const used = !!p.redeemed_at;
+                    return (
+                      <TableRow key={p.id}>
+                        <TableCell className="num font-medium">{p.code}</TableCell>
+                        <TableCell className="num">{p.discount_percent}%</TableCell>
+                        <TableCell className="text-muted-foreground">{p.package_code ?? "Any"}</TableCell>
+                        <TableCell className="num text-muted-foreground">
+                          {p.expires_at ? fmtDate(p.expires_at) : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <StatusDot status={used ? "used" : p.is_active ? "active" : "disabled"} />
+                        </TableCell>
+                        <TableCell className="num text-xs text-muted-foreground">
+                          {used ? fmtDate(p.redeemed_at ?? undefined) : "—"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button size="sm" variant="outline" onClick={() => copy(p.code)}>
+                              Copy
+                            </Button>
+                            {!used && (
+                              <Button size="sm" variant="outline" onClick={() => toggle(p)}>
+                                {p.is_active ? "Disable" : "Enable"}
+                              </Button>
+                            )}
+                            <Button size="sm" variant="ghost" onClick={() => remove(p)}>
+                              <X className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
+
+      <form className="panel h-fit space-y-4 p-5" onSubmit={create}>
+        <div className="font-display font-semibold">Generate promo codes</div>
+        <p className="text-xs text-muted-foreground">
+          Each generated code works exactly once. A 100% code lets a user activate a subscription
+          without paying.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="pq">How many</Label>
+            <Input
+              id="pq"
+              className="num"
+              type="number"
+              min={1}
+              max={100}
+              value={quantity}
+              onChange={(e) => setQuantity(Number(e.target.value))}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="pp">Prefix</Label>
+            <Input id="pp" value={prefix} onChange={(e) => setPrefix(e.target.value.toUpperCase())} />
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="pd">Discount %</Label>
+          <Input
+            id="pd"
+            className="num"
+            type="number"
+            min={1}
+            max={100}
+            value={discount}
+            onChange={(e) => setDiscount(Number(e.target.value))}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Restrict to plan</Label>
+          <Select value={packageCode} onValueChange={setPackageCode}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="any">Any plan</SelectItem>
+              {packages.map((p) => (
+                <SelectItem key={p.code} value={p.code}>
+                  {p.code}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="pe">Expires (optional)</Label>
+          <Input id="pe" type="date" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="pnote">Note (optional)</Label>
+          <Textarea id="pnote" value={note} onChange={(e) => setNote(e.target.value)} />
+        </div>
+        <Button type="submit" className="w-full" disabled={creating}>
+          {creating ? "Generating…" : "Generate"}
+        </Button>
+
+        {lastBatch.length > 0 && (
+          <div className="rounded-md border border-border bg-surface-2 p-3">
+            <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+              Just generated
+            </div>
+            <div className="num mt-2 space-y-1 text-sm">
+              {lastBatch.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className="block w-full text-left hover:text-primary"
+                  onClick={() => copy(p.code)}
+                >
+                  {p.code}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </form>
+    </div>
+  );
+}
