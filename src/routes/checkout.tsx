@@ -53,11 +53,56 @@ export const Route = createFileRoute("/checkout")({
   component: Checkout,
 });
 
-const NETWORKS = [
-  { value: "mpesa", label: "M-Pesa (Safaricom)" },
-  { value: "momo", label: "MTN MoMo" },
-  { value: "airtel", label: "Airtel Money" },
-];
+/** Mobile-money networks Flutterwave accepts, per country. Values are the
+ *  provider's own uppercase identifiers. */
+const NETWORKS_BY_CURRENCY: Record<string, { value: string; label: string }[]> = {
+  RWF: [
+    { value: "MTN", label: "MTN MoMo" },
+    { value: "AIRTEL", label: "Airtel Money" },
+  ],
+  KES: [{ value: "MPESA", label: "M-Pesa (Safaricom)" }],
+  UGX: [
+    { value: "MTN", label: "MTN MoMo" },
+    { value: "AIRTEL", label: "Airtel Money" },
+  ],
+  TZS: [
+    { value: "VODAFONE", label: "M-Pesa (Vodacom)" },
+    { value: "AIRTEL", label: "Airtel Money" },
+    { value: "TIGO", label: "Mixx by Yas (Tigo)" },
+  ],
+  GHS: [
+    { value: "MTN", label: "MTN MoMo" },
+    { value: "VODAFONE", label: "Telecel (Vodafone) Cash" },
+    { value: "AIRTELTIGO", label: "AirtelTigo Money" },
+  ],
+  XAF: [
+    { value: "MTN", label: "MTN MoMo" },
+    { value: "ORANGE", label: "Orange Money" },
+  ],
+  XOF: [
+    { value: "MTN", label: "MTN MoMo" },
+    { value: "ORANGE", label: "Orange Money" },
+    { value: "MOOV", label: "Moov Money" },
+  ],
+};
+
+const CALLING_CODES: Record<string, string> = {
+  RWF: "250",
+  KES: "254",
+  UGX: "256",
+  TZS: "255",
+  GHS: "233",
+  XAF: "237",
+  XOF: "225",
+};
+
+/** Flutterwave wants the national number (no +, no country code, no leading 0). */
+function nationalNumber(raw: string, currency: string): string {
+  let digits = raw.replace(/\D/g, "");
+  const cc = CALLING_CODES[currency];
+  if (cc && digits.startsWith(cc)) digits = digits.slice(cc.length);
+  return digits.replace(/^0+/, "");
+}
 
 function pickNum(o: Record<string, unknown> | undefined | null, keys: string[], fallback = 0): number {
   if (!o) return fallback;
