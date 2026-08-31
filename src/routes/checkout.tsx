@@ -261,43 +261,90 @@ function Checkout() {
 
           <div className="panel mt-6 space-y-4 p-6">
             <div className="flex items-center gap-2 text-sm font-medium">
-              <Smartphone className="h-4 w-4 text-primary" /> Mobile money
+              <Ticket className="h-4 w-4 text-primary" /> Promo code
             </div>
-            <div className="space-y-1.5">
-              <Label>Provider</Label>
-              <Select value={network} onValueChange={setNetwork}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {NETWORKS.map((n) => (
-                    <SelectItem key={n.value} value={n.value}>
-                      {n.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="ph">Mobile number</Label>
-              <Input
-                id="ph"
-                className="num"
-                placeholder="+254 7XX XXX XXX"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
-            </div>
-            {local > 0 && (
-              <p className="text-xs text-muted-foreground">
-                You'll receive an STK push to authorise{" "}
-                {local.toLocaleString("en-US", { maximumFractionDigits: 0 })} {ccy}.
-              </p>
+            {promo ? (
+              <div className="flex flex-wrap items-center gap-3 rounded-md border border-primary/50 bg-surface-2 p-4">
+                <Badge>{promo.code}</Badge>
+                <span className="text-sm text-muted-foreground">
+                  {promo.discount_percent >= 100
+                    ? "Payment skipped — this plan is fully covered"
+                    : `${promo.discount_percent}% off this order`}
+                </span>
+                <Button type="button" size="sm" variant="ghost" className="ml-auto" onClick={removePromo}>
+                  Remove
+                </Button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter promo code"
+                  value={promoInput}
+                  onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void applyPromo();
+                    }
+                  }}
+                />
+                <Button type="button" variant="outline" onClick={applyPromo} disabled={promoBusy}>
+                  {promoBusy ? "Checking…" : "Apply"}
+                </Button>
+              </div>
             )}
+            <p className="text-xs text-muted-foreground">
+              Each promo code can be used once. A 100% code activates your subscription without payment.
+            </p>
           </div>
 
+          {!freeWithPromo && (
+            <div className="panel mt-6 space-y-4 p-6">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Smartphone className="h-4 w-4 text-primary" /> Mobile money
+              </div>
+              <div className="space-y-1.5">
+                <Label>Provider</Label>
+                <Select value={network} onValueChange={setNetwork}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {NETWORKS.map((n) => (
+                      <SelectItem key={n.value} value={n.value}>
+                        {n.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ph">Mobile number</Label>
+                <Input
+                  id="ph"
+                  className="num"
+                  placeholder="+254 7XX XXX XXX"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+              </div>
+              {local > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  You'll receive an STK push to authorise{" "}
+                  {local.toLocaleString("en-US", { maximumFractionDigits: 0 })} {ccy}.
+                </p>
+              )}
+            </div>
+          )}
+
           <Button type="submit" size="lg" className="mt-6 w-full" disabled={busy}>
-            {busy ? "Processing…" : subtotal > 0 ? `Pay ${fmtMoney(subtotal)}` : "Pay"}
+            {busy
+              ? "Processing…"
+              : freeWithPromo
+                ? "Activate with promo code"
+                : total > 0
+                  ? `Pay ${fmtMoney(total)}`
+                  : "Pay"}
           </Button>
         </form>
 
@@ -308,11 +355,18 @@ function Checkout() {
               <span className="text-muted-foreground">{summaryLabel}</span>
               <span className="num">{fmtMoney(subtotal)}</span>
             </div>
+            {promo && (
+              <div className="flex justify-between text-primary">
+                <span>Promo {promo.code}</span>
+                <span className="num">−{fmtMoney(discount)}</span>
+              </div>
+            )}
             <div className="flex justify-between border-t border-border pt-3 text-base font-semibold">
               <span>Total</span>
-              <span className="num">{fmtMoney(subtotal)}</span>
+              <span className="num">{fmtMoney(total)}</span>
             </div>
           </div>
+
 
           <div className="mt-6 space-y-1.5">
             <Label>Charge in</Label>
