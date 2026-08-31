@@ -255,8 +255,12 @@ function Checkout() {
       toast.error("Choose a currency");
       return;
     }
-    if (!phone || !network) {
-      toast.error("Enter your mobile number and network");
+    if (!network) {
+      toast.error("Choose your mobile money provider");
+      return;
+    }
+    if (nationalNumber(phone, ccy).length < 8) {
+      toast.error("Enter a valid mobile number");
       return;
     }
     setBusy(true);
