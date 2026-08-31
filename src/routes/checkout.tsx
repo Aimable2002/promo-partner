@@ -18,6 +18,8 @@ import {
 import { endpoints, ApiError, type CheckoutBody } from "@/lib/api";
 import { fmtMoney } from "@/lib/format";
 import { useActiveAccount } from "@/hooks/use-copydesk";
+import { validatePromoCode, redeemPromoCode, type PromoCheck } from "@/lib/promo";
+
 
 type CheckoutSearch = {
   purpose?: "wallet_topup" | "package" | "challenge_entry";
