@@ -198,6 +198,10 @@ function Checkout() {
       toast.error("No account selected");
       return;
     }
+    if (freeWithPromo) {
+      await redeemFree();
+      return;
+    }
     if (!ccy) {
       toast.error("Choose a currency");
       return;
@@ -208,10 +212,19 @@ function Checkout() {
     }
     setBusy(true);
     try {
+      // A partial promo is consumed first: it must not survive a paid checkout.
+      if (promo) {
+        const res = await redeemPromoCode(promo.code, accountId, search.package_code ?? null);
+        if (!res.valid) {
+          setPromo(null);
+          toast.error(res.reason || "This promo code can no longer be used");
+          return;
+        }
+      }
       const body: CheckoutBody = {
         account_id: accountId,
         purpose: search.purpose ?? "wallet_topup",
-        amount_usd: subtotal > 0 ? subtotal : null,
+        amount_usd: total > 0 ? total : null,
         package_code: search.purpose === "package" ? search.package_code ?? null : null,
         challenge_id: search.purpose === "challenge_entry" ? search.challenge_id ?? null : null,
         currency: ccy,
@@ -223,6 +236,8 @@ function Checkout() {
       const res = await endpoints.checkout(body);
       const reference = pickStr(res, ["reference", "payment_reference", "ref"]);
       toast.success(reference ? `Payment submitted — reference ${reference}` : "Payment submitted");
+      navigate({ to: "/payment-status", search: reference ? { reference } : {} });
+
       navigate({ to: "/payment-status", search: reference ? { reference } : {} });
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Payment failed");
