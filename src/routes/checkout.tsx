@@ -127,7 +127,7 @@ function Checkout() {
   const search = Route.useSearch();
   const { accountId } = useActiveAccount();
   const [ccy, setCcy] = useState("");
-  const [network, setNetwork] = useState("mpesa");
+  const [network, setNetwork] = useState("");
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [promoInput, setPromoInput] = useState("");
@@ -151,6 +151,13 @@ function Checkout() {
   }, [currencies, ccy]);
 
   const cur = currencies.find((c) => c.code === ccy);
+  const networks = NETWORKS_BY_CURRENCY[ccy] ?? [];
+
+  useEffect(() => {
+    if (networks.length && !networks.some((n) => n.value === network)) {
+      setNetwork(networks[0]!.value);
+    }
+  }, [networks, network]);
 
   const quoteQuery = useQuery({
     queryKey: ["payment-quote", total, ccy],
@@ -271,7 +278,7 @@ function Checkout() {
         challenge_id: search.purpose === "challenge_entry" ? search.challenge_id ?? null : null,
         currency: ccy,
         method: "mobilemoney",
-        phone_number: phone,
+        phone_number: nationalNumber(phone, ccy),
         network,
         redirect_url: `${window.location.origin}/payment-status`,
       };
@@ -352,7 +359,7 @@ function Checkout() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {NETWORKS.map((n) => (
+                    {networks.map((n) => (
                       <SelectItem key={n.value} value={n.value}>
                         {n.label}
                       </SelectItem>
@@ -365,7 +372,7 @@ function Checkout() {
                 <Input
                   id="ph"
                   className="num"
-                  placeholder="+254 7XX XXX XXX"
+                  placeholder={ccy && CALLING_CODES[ccy] ? `+${CALLING_CODES[ccy]} 7XX XXX XXX` : "Mobile number"}
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                 />
