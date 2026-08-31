@@ -22,7 +22,7 @@ import { validatePromoCode, redeemPromoCode, type PromoCheck } from "@/lib/promo
 
 
 type CheckoutSearch = {
-  purpose?: "wallet_topup" | "package" | "challenge_entry";
+  purpose?: "package" | "challenge_entry";
   amount_usd?: number;
   package_code?: string;
   challenge_id?: string;
@@ -30,10 +30,7 @@ type CheckoutSearch = {
 
 export const Route = createFileRoute("/checkout")({
   validateSearch: (search: Record<string, unknown>): CheckoutSearch => ({
-    purpose:
-      search.purpose === "package" || search.purpose === "challenge_entry"
-        ? search.purpose
-        : "wallet_topup",
+    purpose: search.purpose === "challenge_entry" ? "challenge_entry" : "package",
     amount_usd: search.amount_usd !== undefined ? Number(search.amount_usd) : undefined,
     package_code: typeof search.package_code === "string" ? search.package_code : undefined,
     challenge_id: typeof search.challenge_id === "string" ? search.challenge_id : undefined,
@@ -176,7 +173,7 @@ function Checkout() {
         await endpoints.selectPackage(accountId, search.package_code);
       }
       toast.success("Promo code redeemed — your subscription is active");
-      navigate({ to: "/wallet" });
+      navigate({ to: "/billing" });
     } catch (err) {
       toast.error(err instanceof ApiError || err instanceof Error ? err.message : "Could not redeem promo code");
     } finally {
@@ -190,7 +187,7 @@ function Checkout() {
       ? `Plan — ${search.package_code ?? ""}`
       : search.purpose === "challenge_entry"
         ? `Challenge entry — ${search.challenge_id ?? ""}`
-        : "Wallet top-up";
+        : "Subscription";
 
   const pay = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -223,7 +220,7 @@ function Checkout() {
       }
       const body: CheckoutBody = {
         account_id: accountId,
-        purpose: search.purpose ?? "wallet_topup",
+        purpose: search.purpose ?? "package",
         amount_usd: total > 0 ? total : null,
         package_code: search.purpose === "package" ? search.package_code ?? null : null,
         challenge_id: search.purpose === "challenge_entry" ? search.challenge_id ?? null : null,
@@ -404,7 +401,7 @@ function Checkout() {
             Cancel any time · no lock-in
           </Badge>
           <p className="mt-4 text-center text-xs text-muted-foreground">
-            <Link to="/wallet" className="hover:text-foreground">
+            <Link to="/billing" className="hover:text-foreground">
               ← Back to billing
             </Link>
           </p>

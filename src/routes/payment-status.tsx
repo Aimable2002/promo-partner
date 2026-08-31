@@ -158,12 +158,12 @@ function PaymentStatus() {
               <Row k="Description" v={description} />
               <Row k="Method" v={method} />
               <Row k="Date" v={fmtDate(date)} />
-              <Row k="Direction" v={amount >= 0 ? "Credit to wallet" : "Debit from wallet"} />
+              <Row k="Direction" v={amount >= 0 ? "Payment received" : "Payment"} />
             </dl>
             {status === "pending" && (
               <p className="mt-5 rounded-md border border-border bg-surface-2 p-4 text-xs text-muted-foreground">
-                Awaiting settlement confirmation from the payment provider. Your wallet is credited
-                automatically once funds clear — no action needed.
+                Awaiting settlement confirmation from the payment provider. Your subscription
+                activates automatically once funds clear — no action needed.
               </p>
             )}
             {status === "failed" && (
@@ -175,8 +175,8 @@ function PaymentStatus() {
         )}
 
         <p className="mt-10 text-xs text-muted-foreground">
-          <Link to="/wallet" className="hover:text-foreground">
-            ← Back to wallet
+          <Link to="/billing" className="hover:text-foreground">
+            ← Back to billing
           </Link>
         </p>
       </div>

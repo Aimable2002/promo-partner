@@ -5,7 +5,7 @@ import {
   Trophy,
   History,
   Target,
-  Wallet,
+  CreditCard,
   Settings,
   ShieldCheck,
   Bell,
@@ -23,7 +23,7 @@ const NAV = [
   { to: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { to: "/trades", label: "Trade history", icon: History },
   { to: "/challenges", label: "Challenges", icon: Target },
-  { to: "/wallet", label: "Wallet & billing", icon: Wallet },
+  { to: "/billing", label: "Plans & billing", icon: CreditCard },
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
