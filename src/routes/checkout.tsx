@@ -88,8 +88,14 @@ function Checkout() {
   const [network, setNetwork] = useState("mpesa");
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
+  const [promoInput, setPromoInput] = useState("");
+  const [promo, setPromo] = useState<(PromoCheck & { code: string }) | null>(null);
+  const [promoBusy, setPromoBusy] = useState(false);
 
   const subtotal = search.amount_usd ?? 0;
+  const discount = promo ? (subtotal * promo.discount_percent) / 100 : 0;
+  const total = Math.max(0, Number((subtotal - discount).toFixed(2)));
+  const freeWithPromo = !!promo && total <= 0;
 
   const currenciesQuery = useQuery({
     queryKey: ["payment-currencies"],
@@ -105,18 +111,79 @@ function Checkout() {
   const cur = currencies.find((c) => c.code === ccy);
 
   const quoteQuery = useQuery({
-    queryKey: ["payment-quote", subtotal, ccy],
-    queryFn: () => endpoints.quote({ amount_usd: subtotal, currency: ccy }),
-    enabled: subtotal > 0 && !!ccy,
+    queryKey: ["payment-quote", total, ccy],
+    queryFn: () => endpoints.quote({ amount_usd: total, currency: ccy }),
+    enabled: total > 0 && !!ccy,
   });
 
-  const localFallback = cur?.rate_per_usd ? subtotal * cur.rate_per_usd : 0;
+  const localFallback = cur?.rate_per_usd ? total * cur.rate_per_usd : 0;
   const local = quoteQuery.data
     ? pickNum(quoteQuery.data, ["amount_local", "local_amount", "converted_amount", "amount"], localFallback)
     : localFallback;
   const rate = quoteQuery.data
     ? pickNum(quoteQuery.data, ["rate", "rate_per_usd", "fx_rate"], cur?.rate_per_usd ?? 0)
     : cur?.rate_per_usd ?? 0;
+
+  const applyPromo = async () => {
+    const code = promoInput.trim();
+    if (!code) {
+      toast.error("Enter a promo code");
+      return;
+    }
+    setPromoBusy(true);
+    try {
+      const res = await validatePromoCode(code, search.package_code ?? null);
+      if (!res.valid) {
+        setPromo(null);
+        toast.error(res.reason || "Invalid promo code");
+        return;
+      }
+      setPromo({ ...res, code });
+      toast.success(
+        res.discount_percent >= 100
+          ? "Promo applied — no payment needed"
+          : `Promo applied — ${res.discount_percent}% off`,
+      );
+    } catch (err) {
+      setPromo(null);
+      toast.error(err instanceof Error ? err.message : "Could not check that promo code");
+    } finally {
+      setPromoBusy(false);
+    }
+  };
+
+  const removePromo = () => {
+    setPromo(null);
+    setPromoInput("");
+  };
+
+  /** Full-comp promo: consume the code and activate the plan without payment. */
+  const redeemFree = async () => {
+    if (!promo) return;
+    if (!accountId) {
+      toast.error("No account selected");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await redeemPromoCode(promo.code, accountId, search.package_code ?? null);
+      if (!res.valid) {
+        setPromo(null);
+        toast.error(res.reason || "This promo code can no longer be used");
+        return;
+      }
+      if (search.purpose === "package" && search.package_code) {
+        await endpoints.selectPackage(accountId, search.package_code);
+      }
+      toast.success("Promo code redeemed — your subscription is active");
+      navigate({ to: "/wallet" });
+    } catch (err) {
+      toast.error(err instanceof ApiError || err instanceof Error ? err.message : "Could not redeem promo code");
+    } finally {
+      setBusy(false);
+    }
+  };
+
 
   const summaryLabel =
     search.purpose === "package"
