@@ -10,33 +10,232 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as ChallengesRouteImport } from './routes/challenges'
+import { Route as CheckoutRouteImport } from './routes/checkout'
+import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as LeaderboardRouteImport } from './routes/leaderboard'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as PaymentStatusRouteImport } from './routes/payment-status'
+import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as TradesRouteImport } from './routes/trades'
+import { Route as WalletRouteImport } from './routes/wallet'
+import { Route as AccountsAccountIdRouteImport } from './routes/accounts.$accountId'
+import { Route as MastersIndexRouteImport } from './routes/masters.index'
+import { Route as MastersMasterIdRouteImport } from './routes/masters.$masterId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChallengesRoute = ChallengesRouteImport.update({
+  id: '/challenges',
+  path: '/challenges',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckoutRoute = CheckoutRouteImport.update({
+  id: '/checkout',
+  path: '/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LeaderboardRoute = LeaderboardRouteImport.update({
+  id: '/leaderboard',
+  path: '/leaderboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PaymentStatusRoute = PaymentStatusRouteImport.update({
+  id: '/payment-status',
+  path: '/payment-status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TradesRoute = TradesRouteImport.update({
+  id: '/trades',
+  path: '/trades',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WalletRoute = WalletRouteImport.update({
+  id: '/wallet',
+  path: '/wallet',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountsAccountIdRoute = AccountsAccountIdRouteImport.update({
+  id: '/accounts/$accountId',
+  path: '/accounts/$accountId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MastersIndexRoute = MastersIndexRouteImport.update({
+  id: '/masters/',
+  path: '/masters/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MastersMasterIdRoute = MastersMasterIdRouteImport.update({
+  id: '/masters/$masterId',
+  path: '/masters/$masterId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
+  '/auth': typeof AuthRoute
+  '/challenges': typeof ChallengesRoute
+  '/checkout': typeof CheckoutRoute
+  '/dashboard': typeof DashboardRoute
+  '/leaderboard': typeof LeaderboardRoute
+  '/onboarding': typeof OnboardingRoute
+  '/payment-status': typeof PaymentStatusRoute
+  '/pricing': typeof PricingRoute
+  '/settings': typeof SettingsRoute
+  '/trades': typeof TradesRoute
+  '/wallet': typeof WalletRoute
+  '/accounts/$accountId': typeof AccountsAccountIdRoute
+  '/masters/$masterId': typeof MastersMasterIdRoute
+  '/masters/': typeof MastersIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
+  '/auth': typeof AuthRoute
+  '/challenges': typeof ChallengesRoute
+  '/checkout': typeof CheckoutRoute
+  '/dashboard': typeof DashboardRoute
+  '/leaderboard': typeof LeaderboardRoute
+  '/onboarding': typeof OnboardingRoute
+  '/payment-status': typeof PaymentStatusRoute
+  '/pricing': typeof PricingRoute
+  '/settings': typeof SettingsRoute
+  '/trades': typeof TradesRoute
+  '/wallet': typeof WalletRoute
+  '/accounts/$accountId': typeof AccountsAccountIdRoute
+  '/masters/$masterId': typeof MastersMasterIdRoute
+  '/masters': typeof MastersIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
+  '/auth': typeof AuthRoute
+  '/challenges': typeof ChallengesRoute
+  '/checkout': typeof CheckoutRoute
+  '/dashboard': typeof DashboardRoute
+  '/leaderboard': typeof LeaderboardRoute
+  '/onboarding': typeof OnboardingRoute
+  '/payment-status': typeof PaymentStatusRoute
+  '/pricing': typeof PricingRoute
+  '/settings': typeof SettingsRoute
+  '/trades': typeof TradesRoute
+  '/wallet': typeof WalletRoute
+  '/accounts/$accountId': typeof AccountsAccountIdRoute
+  '/masters/$masterId': typeof MastersMasterIdRoute
+  '/masters/': typeof MastersIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/auth'
+    | '/challenges'
+    | '/checkout'
+    | '/dashboard'
+    | '/leaderboard'
+    | '/onboarding'
+    | '/payment-status'
+    | '/pricing'
+    | '/settings'
+    | '/trades'
+    | '/wallet'
+    | '/accounts/$accountId'
+    | '/masters/$masterId'
+    | '/masters/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/admin'
+    | '/auth'
+    | '/challenges'
+    | '/checkout'
+    | '/dashboard'
+    | '/leaderboard'
+    | '/onboarding'
+    | '/payment-status'
+    | '/pricing'
+    | '/settings'
+    | '/trades'
+    | '/wallet'
+    | '/accounts/$accountId'
+    | '/masters/$masterId'
+    | '/masters'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/auth'
+    | '/challenges'
+    | '/checkout'
+    | '/dashboard'
+    | '/leaderboard'
+    | '/onboarding'
+    | '/payment-status'
+    | '/pricing'
+    | '/settings'
+    | '/trades'
+    | '/wallet'
+    | '/accounts/$accountId'
+    | '/masters/$masterId'
+    | '/masters/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
+  AuthRoute: typeof AuthRoute
+  ChallengesRoute: typeof ChallengesRoute
+  CheckoutRoute: typeof CheckoutRoute
+  DashboardRoute: typeof DashboardRoute
+  LeaderboardRoute: typeof LeaderboardRoute
+  OnboardingRoute: typeof OnboardingRoute
+  PaymentStatusRoute: typeof PaymentStatusRoute
+  PricingRoute: typeof PricingRoute
+  SettingsRoute: typeof SettingsRoute
+  TradesRoute: typeof TradesRoute
+  WalletRoute: typeof WalletRoute
+  AccountsAccountIdRoute: typeof AccountsAccountIdRoute
+  MastersMasterIdRoute: typeof MastersMasterIdRoute
+  MastersIndexRoute: typeof MastersIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +247,131 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/challenges': {
+      id: '/challenges'
+      path: '/challenges'
+      fullPath: '/challenges'
+      preLoaderRoute: typeof ChallengesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout': {
+      id: '/checkout'
+      path: '/checkout'
+      fullPath: '/checkout'
+      preLoaderRoute: typeof CheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/leaderboard': {
+      id: '/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/leaderboard'
+      preLoaderRoute: typeof LeaderboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/payment-status': {
+      id: '/payment-status'
+      path: '/payment-status'
+      fullPath: '/payment-status'
+      preLoaderRoute: typeof PaymentStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trades': {
+      id: '/trades'
+      path: '/trades'
+      fullPath: '/trades'
+      preLoaderRoute: typeof TradesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/wallet': {
+      id: '/wallet'
+      path: '/wallet'
+      fullPath: '/wallet'
+      preLoaderRoute: typeof WalletRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/accounts/$accountId': {
+      id: '/accounts/$accountId'
+      path: '/accounts/$accountId'
+      fullPath: '/accounts/$accountId'
+      preLoaderRoute: typeof AccountsAccountIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/masters/': {
+      id: '/masters/'
+      path: '/masters'
+      fullPath: '/masters/'
+      preLoaderRoute: typeof MastersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/masters/$masterId': {
+      id: '/masters/$masterId'
+      path: '/masters/$masterId'
+      fullPath: '/masters/$masterId'
+      preLoaderRoute: typeof MastersMasterIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
+  AuthRoute: AuthRoute,
+  ChallengesRoute: ChallengesRoute,
+  CheckoutRoute: CheckoutRoute,
+  DashboardRoute: DashboardRoute,
+  LeaderboardRoute: LeaderboardRoute,
+  OnboardingRoute: OnboardingRoute,
+  PaymentStatusRoute: PaymentStatusRoute,
+  PricingRoute: PricingRoute,
+  SettingsRoute: SettingsRoute,
+  TradesRoute: TradesRoute,
+  WalletRoute: WalletRoute,
+  AccountsAccountIdRoute: AccountsAccountIdRoute,
+  MastersMasterIdRoute: MastersMasterIdRoute,
+  MastersIndexRoute: MastersIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
