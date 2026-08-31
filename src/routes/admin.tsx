@@ -243,6 +243,7 @@ function Admin() {
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="challenges">Challenges</TabsTrigger>
           <TabsTrigger value="directory">Directory</TabsTrigger>
+          <TabsTrigger value="promos">Promo codes</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
