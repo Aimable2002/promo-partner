@@ -100,14 +100,9 @@ function AccountDetails() {
   const [switchOpen, setSwitchOpen] = useState(false);
   const [switchTarget, setSwitchTarget] = useState<string>("");
 
-  const walletQuery = useQuery({
-    queryKey: ["wallet", accountId],
-    queryFn: () => endpoints.wallet(accountId),
-    enabled: !!accountId && !isMaster,
-  });
-  const walletTxQuery = useQuery({
-    queryKey: ["wallet-transactions", accountId],
-    queryFn: () => endpoints.walletTransactions(accountId),
+  const billingQuery = useQuery({
+    queryKey: ["billing", accountId],
+    queryFn: () => endpoints.billing(accountId),
     enabled: !!accountId && !isMaster,
   });
 
@@ -297,8 +292,7 @@ function AccountDetails() {
           {isMaster && <TabsTrigger value="earnings">Earnings</TabsTrigger>}
           {isMaster && <TabsTrigger value="payouts">Payouts</TabsTrigger>}
           {isMaster && <TabsTrigger value="copiers">Copiers</TabsTrigger>}
-          {!isMaster && <TabsTrigger value="wallet">Wallet & billing</TabsTrigger>}
-          {!isMaster && <TabsTrigger value="spend">Spend history</TabsTrigger>}
+          {!isMaster && <TabsTrigger value="subscription">Subscription</TabsTrigger>}
           <TabsTrigger value="log">Trade log</TabsTrigger>
         </TabsList>
 
@@ -565,60 +559,37 @@ function AccountDetails() {
         )}
 
         {!isMaster && (
-          <TabsContent value="wallet" className="mt-5">
+          <TabsContent value="subscription" className="mt-5">
             <div className="grid gap-6 lg:grid-cols-2">
               <div className="panel p-6">
-                <h3 className="font-display font-semibold">Wallet</h3>
-                <div className="num mt-4 text-4xl font-bold">
-                  {fmtMoney(num((walletQuery.data as Record<string, unknown> | undefined)?.balance))}
+                <h3 className="font-display font-semibold">Subscription</h3>
+                <div className="mt-4 text-2xl font-semibold">
+                  {String(
+                    (billingQuery.data as Record<string, unknown> | undefined)?.["package_code"] ??
+                      "No plan",
+                  )}
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Fees are debited from your wallet — never from your broker account.
+                  Copying stays enabled while this account has an active subscription. Nothing is
+                  ever debited from your broker account.
                 </p>
                 <div className="mt-5 flex gap-2">
                   <Button asChild>
-                    <Link to="/checkout">Top up</Link>
+                    <Link to="/billing">Manage subscription</Link>
                   </Button>
                   <Button asChild variant="outline">
-                    <Link to="/wallet">Manage billing</Link>
+                    <Link to="/checkout" search={{ purpose: "package" as const }}>
+                      Pay or redeem promo
+                    </Link>
                   </Button>
                 </div>
               </div>
               <div className="panel p-6">
-                <h3 className="font-display font-semibold">Billing</h3>
+                <h3 className="font-display font-semibold">Plans</h3>
                 <p className="mt-4 text-sm text-muted-foreground">
-                  Manage your subscription package and payment history from the wallet page.
+                  Compare packages and switch plans on the Plans &amp; billing page.
                 </p>
               </div>
-            </div>
-          </TabsContent>
-        )}
-
-        {!isMaster && (
-          <TabsContent value="spend" className="mt-5">
-            <div className="panel overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Reference</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(walletTxQuery.data ?? []).map((s, i) => (
-                    <TableRow key={String(s.id ?? i)}>
-                      <TableCell className="num text-xs">{String(s.id ?? i)}</TableCell>
-                      <TableCell className="num text-xs text-muted-foreground">
-                        {fmtDate(s.created_at as string | undefined)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{String(s.type ?? "—")}</TableCell>
-                      <TableCell className="num text-right">{fmtMoney(num(s.amount))}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
             </div>
           </TabsContent>
         )}

@@ -206,7 +206,7 @@ function Admin() {
           label: "Payouts pending",
           value: `${fmtMoney(num(summary.payouts_pending_amount))} · ${num(summary.payouts_pending_count)}`,
         },
-        { label: "At-risk wallets", value: String(num(summary.at_risk_wallets_count)) },
+        { label: "At-risk accounts", value: String(num(summary.at_risk_wallets_count)) },
         { label: "Copied today", value: String(num(summary.copied_today)) },
         { label: "Failed copies (24h)", value: String(num(summary.failed_copies_24h)) },
         { label: "Failed copy rate (24h)", value: `${num(summary.failed_copies_pct_24h).toFixed(1)}%` },
@@ -384,7 +384,7 @@ function Admin() {
                       <Field k="Min days" v={String(c.min_days)} />
                     </div>
                     <p className="mt-4 text-xs text-muted-foreground">
-                      Reward: {c.reward_amount ? `${fmtMoney(c.reward_amount)} wallet credit` : "no wallet credit"}
+                      Reward: {c.reward_amount ? `${fmtMoney(c.reward_amount)} reward` : "no reward"}
                     </p>
                   </div>
                 ))}
@@ -432,7 +432,7 @@ function Admin() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="ra">Reward amount (wallet credit)</Label>
+                  <Label htmlFor="ra">Reward amount (USD)</Label>
                   <Input id="ra" className="num" type="number" value={form.reward_amount ?? 0} onChange={(e) => setForm((f) => ({ ...f, reward_amount: Number(e.target.value) }))} />
                 </div>
                 <div className="flex items-center justify-between rounded-md border border-border p-3">

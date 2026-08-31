@@ -22,7 +22,7 @@ import { validatePromoCode, redeemPromoCode, type PromoCheck } from "@/lib/promo
 
 
 type CheckoutSearch = {
-  purpose?: "wallet_topup" | "package" | "challenge_entry";
+  purpose?: "package" | "challenge_entry";
   amount_usd?: number;
   package_code?: string;
   challenge_id?: string;
@@ -30,10 +30,7 @@ type CheckoutSearch = {
 
 export const Route = createFileRoute("/checkout")({
   validateSearch: (search: Record<string, unknown>): CheckoutSearch => ({
-    purpose:
-      search.purpose === "package" || search.purpose === "challenge_entry"
-        ? search.purpose
-        : "wallet_topup",
+    purpose: search.purpose === "challenge_entry" ? "challenge_entry" : "package",
     amount_usd: search.amount_usd !== undefined ? Number(search.amount_usd) : undefined,
     package_code: typeof search.package_code === "string" ? search.package_code : undefined,
     challenge_id: typeof search.challenge_id === "string" ? search.challenge_id : undefined,
@@ -56,11 +53,56 @@ export const Route = createFileRoute("/checkout")({
   component: Checkout,
 });
 
-const NETWORKS = [
-  { value: "mpesa", label: "M-Pesa (Safaricom)" },
-  { value: "momo", label: "MTN MoMo" },
-  { value: "airtel", label: "Airtel Money" },
-];
+/** Mobile-money networks Flutterwave accepts, per country. Values are the
+ *  provider's own uppercase identifiers. */
+const NETWORKS_BY_CURRENCY: Record<string, { value: string; label: string }[]> = {
+  RWF: [
+    { value: "MTN", label: "MTN MoMo" },
+    { value: "AIRTEL", label: "Airtel Money" },
+  ],
+  KES: [{ value: "MPESA", label: "M-Pesa (Safaricom)" }],
+  UGX: [
+    { value: "MTN", label: "MTN MoMo" },
+    { value: "AIRTEL", label: "Airtel Money" },
+  ],
+  TZS: [
+    { value: "VODAFONE", label: "M-Pesa (Vodacom)" },
+    { value: "AIRTEL", label: "Airtel Money" },
+    { value: "TIGO", label: "Mixx by Yas (Tigo)" },
+  ],
+  GHS: [
+    { value: "MTN", label: "MTN MoMo" },
+    { value: "VODAFONE", label: "Telecel (Vodafone) Cash" },
+    { value: "AIRTELTIGO", label: "AirtelTigo Money" },
+  ],
+  XAF: [
+    { value: "MTN", label: "MTN MoMo" },
+    { value: "ORANGE", label: "Orange Money" },
+  ],
+  XOF: [
+    { value: "MTN", label: "MTN MoMo" },
+    { value: "ORANGE", label: "Orange Money" },
+    { value: "MOOV", label: "Moov Money" },
+  ],
+};
+
+const CALLING_CODES: Record<string, string> = {
+  RWF: "250",
+  KES: "254",
+  UGX: "256",
+  TZS: "255",
+  GHS: "233",
+  XAF: "237",
+  XOF: "225",
+};
+
+/** Flutterwave wants the national number (no +, no country code, no leading 0). */
+function nationalNumber(raw: string, currency: string): string {
+  let digits = raw.replace(/\D/g, "");
+  const cc = CALLING_CODES[currency];
+  if (cc && digits.startsWith(cc)) digits = digits.slice(cc.length);
+  return digits.replace(/^0+/, "");
+}
 
 function pickNum(o: Record<string, unknown> | undefined | null, keys: string[], fallback = 0): number {
   if (!o) return fallback;
@@ -85,7 +127,7 @@ function Checkout() {
   const search = Route.useSearch();
   const { accountId } = useActiveAccount();
   const [ccy, setCcy] = useState("");
-  const [network, setNetwork] = useState("mpesa");
+  const [network, setNetwork] = useState("");
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [promoInput, setPromoInput] = useState("");
@@ -109,6 +151,13 @@ function Checkout() {
   }, [currencies, ccy]);
 
   const cur = currencies.find((c) => c.code === ccy);
+  const networks = NETWORKS_BY_CURRENCY[ccy] ?? [];
+
+  useEffect(() => {
+    if (networks.length && !networks.some((n) => n.value === network)) {
+      setNetwork(networks[0]!.value);
+    }
+  }, [networks, network]);
 
   const quoteQuery = useQuery({
     queryKey: ["payment-quote", total, ccy],
@@ -176,7 +225,7 @@ function Checkout() {
         await endpoints.selectPackage(accountId, search.package_code);
       }
       toast.success("Promo code redeemed — your subscription is active");
-      navigate({ to: "/wallet" });
+      navigate({ to: "/billing" });
     } catch (err) {
       toast.error(err instanceof ApiError || err instanceof Error ? err.message : "Could not redeem promo code");
     } finally {
@@ -190,7 +239,7 @@ function Checkout() {
       ? `Plan — ${search.package_code ?? ""}`
       : search.purpose === "challenge_entry"
         ? `Challenge entry — ${search.challenge_id ?? ""}`
-        : "Wallet top-up";
+        : "Subscription";
 
   const pay = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -206,8 +255,12 @@ function Checkout() {
       toast.error("Choose a currency");
       return;
     }
-    if (!phone || !network) {
-      toast.error("Enter your mobile number and network");
+    if (!network) {
+      toast.error("Choose your mobile money provider");
+      return;
+    }
+    if (nationalNumber(phone, ccy).length < 8) {
+      toast.error("Enter a valid mobile number");
       return;
     }
     setBusy(true);
@@ -223,13 +276,13 @@ function Checkout() {
       }
       const body: CheckoutBody = {
         account_id: accountId,
-        purpose: search.purpose ?? "wallet_topup",
+        purpose: search.purpose ?? "package",
         amount_usd: total > 0 ? total : null,
         package_code: search.purpose === "package" ? search.package_code ?? null : null,
         challenge_id: search.purpose === "challenge_entry" ? search.challenge_id ?? null : null,
         currency: ccy,
         method: "mobilemoney",
-        phone_number: phone,
+        phone_number: nationalNumber(phone, ccy),
         network,
         redirect_url: `${window.location.origin}/payment-status`,
       };
@@ -310,7 +363,7 @@ function Checkout() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {NETWORKS.map((n) => (
+                    {networks.map((n) => (
                       <SelectItem key={n.value} value={n.value}>
                         {n.label}
                       </SelectItem>
@@ -323,7 +376,7 @@ function Checkout() {
                 <Input
                   id="ph"
                   className="num"
-                  placeholder="+254 7XX XXX XXX"
+                  placeholder={ccy && CALLING_CODES[ccy] ? `+${CALLING_CODES[ccy]} 7XX XXX XXX` : "Mobile number"}
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                 />
@@ -404,7 +457,7 @@ function Checkout() {
             Cancel any time · no lock-in
           </Badge>
           <p className="mt-4 text-center text-xs text-muted-foreground">
-            <Link to="/wallet" className="hover:text-foreground">
+            <Link to="/billing" className="hover:text-foreground">
               ← Back to billing
             </Link>
           </p>

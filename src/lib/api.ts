@@ -180,7 +180,7 @@ export type PaymentCurrency = {
 
 export type CheckoutBody = {
   account_id: string;
-  purpose: "wallet_topup" | "package" | "challenge_entry";
+  purpose: "package" | "challenge_entry";
   amount_usd?: number | null;
   package_code?: string | null;
   challenge_id?: string | null;
@@ -296,12 +296,7 @@ export const endpoints = {
   leaveChallenge: (accountId: string, challengeId: string) =>
     api.post(`/masters/${accountId}/challenges/${challengeId}/leave`),
 
-  /* ------------------------------------------------------ wallet/billing */
-  wallet: (accountId: string) => api.get<Record<string, unknown>>(`/accounts/${accountId}/wallet`),
-  walletTransactions: (accountId: string) =>
-    api
-      .get(`/accounts/${accountId}/wallet/transactions`)
-      .then((r) => unwrapList<Record<string, unknown>>(r, "transactions")),
+  /* ------------------------------------------------------------ billing */
   billing: (accountId: string) => api.get<Record<string, unknown>>(`/accounts/${accountId}/billing`),
   selectPackage: (accountId: string, packageCode: string) =>
     api.post(`/accounts/${accountId}/billing/select-package`, { package_code: packageCode }),

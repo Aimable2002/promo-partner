@@ -52,7 +52,7 @@ export function MarketingFooter() {
           links={[
             ["Sign in", "/auth"],
             ["Dashboard", "/dashboard"],
-            ["Wallet", "/wallet"],
+            ["Plans & billing", "/billing"],
             ["Payment status", "/payment-status"],
           ]}
         />
