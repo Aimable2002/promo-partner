@@ -237,8 +237,6 @@ function Checkout() {
       const reference = pickStr(res, ["reference", "payment_reference", "ref"]);
       toast.success(reference ? `Payment submitted — reference ${reference}` : "Payment submitted");
       navigate({ to: "/payment-status", search: reference ? { reference } : {} });
-
-      navigate({ to: "/payment-status", search: reference ? { reference } : {} });
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Payment failed");
     } finally {
