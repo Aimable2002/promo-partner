@@ -313,7 +313,7 @@ function ChallengesPage() {
                   </dl>
                   <div className="mt-5 rounded-md border border-border bg-surface-2 p-3 text-xs text-muted-foreground">
                     <Trophy className="mb-1.5 h-3.5 w-3.5 text-warn" />
-                    {p.reward_amount ? `${fmtMoney(p.reward_amount)} wallet credit on passing` : "No reward configured"}
+                    {p.reward_amount ? `${fmtMoney(p.reward_amount)} reward on passing` : "No reward configured"}
                   </div>
                   <Button
                     className="mt-5"
