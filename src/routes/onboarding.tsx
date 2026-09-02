@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, Check, Radio, Users } from "lucide-react";
@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { endpoints, ApiError, type DirectoryMaster } from "@/lib/api";
 import type { SizingMode } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
+import { useFollowerAccountLimit } from "@/hooks/use-copydesk";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({
@@ -63,6 +64,11 @@ function Onboarding() {
   const [formError, setFormError] = useState<string | null>(null);
   const [doneInfo, setDoneInfo] = useState<DoneInfo | null>(null);
 
+  // Subscription cap: FOLLOWER accounts only. Masters are exempt and never
+  // blocked here, regardless of billing status.
+  const followerLimit = useFollowerAccountLimit();
+  const followerBlocked = role === "follower" && !followerLimit.isLoading && followerLimit.atLimit;
+
   const mastersQuery = useQuery({
     queryKey: ["onboarding-masters-directory"],
     queryFn: (): Promise<DirectoryMaster[]> => endpoints.mastersDirectory(),
@@ -87,7 +93,10 @@ function Onboarding() {
     }
   }, []);
 
-  const steps = role === "master" ? ["Role", "Platform", "Account", "Done"] : ["Role", "Master", "Account", "Sizing", "Done"];
+  const steps =
+    role === "master"
+      ? ["Role", "Platform", "Account", "Done"]
+      : ["Role", "Master", "Account", "Sizing", "Done"];
   const last = steps.length - 1;
   const accountStepIndex = role === "master" ? 2 : 2;
   const doneStepIndex = last;
@@ -118,7 +127,11 @@ function Onboarding() {
 
   const goDashboard = () => navigate({ to: "/dashboard" });
 
-  const handleProvisionResult = (res: { status?: string; account_id?: string; message?: string }) => {
+  const handleProvisionResult = (res: {
+    status?: string;
+    account_id?: string;
+    message?: string;
+  }) => {
     if (res.status === "awaiting_attention") {
       toast.info(
         res.message ??
@@ -143,7 +156,12 @@ function Onboarding() {
           if (!url) throw new Error("No redirect URL returned for cTrader connection.");
           window.location.assign(url);
         } catch (err) {
-          const message = err instanceof ApiError ? err.message : err instanceof Error ? err.message : "Failed to start cTrader connection";
+          const message =
+            err instanceof ApiError
+              ? err.message
+              : err instanceof Error
+                ? err.message
+                : "Failed to start cTrader connection";
           setFormError(message);
           toast.error(message);
         } finally {
@@ -167,7 +185,12 @@ function Onboarding() {
         });
         handleProvisionResult(res);
       } catch (err) {
-        const message = err instanceof ApiError ? err.message : err instanceof Error ? err.message : "Provisioning failed";
+        const message =
+          err instanceof ApiError
+            ? err.message
+            : err instanceof Error
+              ? err.message
+              : "Provisioning failed";
         setFormError(message);
         toast.error(message);
       } finally {
@@ -204,7 +227,12 @@ function Onboarding() {
       });
       handleProvisionResult(res);
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : err instanceof Error ? err.message : "Provisioning failed";
+      const message =
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Provisioning failed";
       setFormError(message);
       toast.error(message);
     } finally {
@@ -213,7 +241,7 @@ function Onboarding() {
   };
 
   const canContinue = () => {
-    if (step === 0) return !!role;
+    if (step === 0) return !!role && !followerBlocked;
     return true;
   };
 
@@ -244,7 +272,9 @@ function Onboarding() {
               >
                 {i < step ? <Check className="h-3 w-3" /> : i + 1}
               </span>
-              <span className={cn("text-xs", i === step ? "text-foreground" : "text-muted-foreground")}>
+              <span
+                className={cn("text-xs", i === step ? "text-foreground" : "text-muted-foreground")}
+              >
                 {s}
               </span>
               {i < steps.length - 1 && <span className="h-px flex-1 bg-border" />}
@@ -253,7 +283,10 @@ function Onboarding() {
         </div>
 
         {step === 0 && (
-          <Panel title="How are you joining?" sub="You can add the other side later from your dashboard.">
+          <Panel
+            title="How are you joining?"
+            sub="You can add the other side later from your dashboard."
+          >
             <div className="grid gap-4 sm:grid-cols-2">
               <RoleCard
                 active={role === "master"}
@@ -261,7 +294,11 @@ function Onboarding() {
                 icon={Radio}
                 title="Master"
                 desc="Publish your live fills. Followers mirror them and you earn a performance or monthly fee."
-                bullets={["MT5 or cTrader", "Public profile & directory listing", "Monthly payouts"]}
+                bullets={[
+                  "MT5 or cTrader",
+                  "Public profile & directory listing",
+                  "Monthly payouts",
+                ]}
               />
               <RoleCard
                 active={role === "follower"}
@@ -272,6 +309,29 @@ function Onboarding() {
                 bullets={["MT5 brokers", "Risk-normalised sizing", "Pause any time"]}
               />
             </div>
+            {followerBlocked && (
+              <div className="mt-4 rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm">
+                {followerLimit.limit === 0 ? (
+                  <p>
+                    You need an active subscription before connecting a follower account.{" "}
+                    <Link to="/billing" className="underline">
+                      Choose a plan
+                    </Link>
+                    .
+                  </p>
+                ) : (
+                  <p>
+                    Your plan allows {followerLimit.limit} follower account
+                    {followerLimit.limit === 1 ? "" : "s"}, and you already have{" "}
+                    {followerLimit.followerCount}.{" "}
+                    <Link to="/billing" className="underline">
+                      Upgrade your plan
+                    </Link>{" "}
+                    to connect another.
+                  </p>
+                )}
+              </div>
+            )}
           </Panel>
         )}
 
@@ -284,7 +344,9 @@ function Onboarding() {
                   onClick={() => setPlatform(p)}
                   className={cn(
                     "rounded-lg border p-5 text-left transition-colors",
-                    platform === p ? "border-primary bg-surface-2" : "border-border bg-surface hover:border-border",
+                    platform === p
+                      ? "border-primary bg-surface-2"
+                      : "border-border bg-surface hover:border-border",
                   )}
                 >
                   <div className="font-display text-lg font-semibold">{p}</div>
@@ -300,7 +362,10 @@ function Onboarding() {
         )}
 
         {step === 1 && role === "follower" && (
-          <Panel title="Pick a master to copy" sub="Change or add more later — Pro allows unlimited subscriptions.">
+          <Panel
+            title="Pick a master to copy"
+            sub="Change or add more later — Pro allows unlimited subscriptions."
+          >
             <div className="space-y-3">
               {mastersQuery.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
               {!mastersQuery.isLoading && visibleMasters.length === 0 && (
@@ -312,7 +377,9 @@ function Onboarding() {
                   onClick={() => setMasterId(m.account_id)}
                   className={cn(
                     "flex w-full items-center gap-4 rounded-lg border p-4 text-left transition-colors",
-                    masterId === m.account_id ? "border-primary bg-surface-2" : "border-border bg-surface",
+                    masterId === m.account_id
+                      ? "border-primary bg-surface-2"
+                      : "border-border bg-surface",
                   )}
                 >
                   <Avatar name={m.display_name ?? "Master"} />
@@ -399,7 +466,10 @@ function Onboarding() {
         )}
 
         {step === 3 && role === "follower" && (
-          <Panel title="How should your positions be sized?" sub="This is the single most important setting on the platform.">
+          <Panel
+            title="How should your positions be sized?"
+            sub="This is the single most important setting on the platform."
+          >
             <div className="grid gap-3">
               {[
                 {
@@ -433,7 +503,11 @@ function Onboarding() {
                 >
                   <div className="flex items-center gap-2 font-medium">
                     {o.t}
-                    {o.id === "micro-scale" && <Badge variant="outline" className="text-[10px]">for accounts under $500</Badge>}
+                    {o.id === "micro-scale" && (
+                      <Badge variant="outline" className="text-[10px]">
+                        for accounts under $500
+                      </Badge>
+                    )}
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">{o.d}</p>
                 </button>
@@ -455,7 +529,8 @@ function Onboarding() {
                   onValueChange={(v) => setRisk(v[0] ?? 0.75)}
                 />
                 <p className="mt-3 text-xs text-muted-foreground">
-                  On a $4,820 account that's about ${(4820 * risk / 100).toFixed(2)} at stop-loss per position.
+                  On a $4,820 account that's about ${((4820 * risk) / 100).toFixed(2)} at stop-loss
+                  per position.
                 </p>
               </div>
             )}
@@ -496,7 +571,9 @@ function Onboarding() {
 
         {step === doneStepIndex && (
           <Panel
-            title={doneInfo?.status === "ctrader_connected" ? "cTrader connected" : "You're all set"}
+            title={
+              doneInfo?.status === "ctrader_connected" ? "cTrader connected" : "You're all set"
+            }
             {...(doneInfo?.message ? { sub: doneInfo.message } : {})}
           >
             <div className="rounded-lg border border-border bg-surface p-6 text-center">
@@ -525,7 +602,8 @@ function Onboarding() {
               disabled={!canContinue() || submitting}
               onClick={() => (step === last - 1 ? finish() : setStep((s) => s + 1))}
             >
-              {step === last - 1 ? (submitting ? "Submitting…" : "Finish setup") : "Continue"} <ArrowRight className="ml-1 h-4 w-4" />
+              {step === last - 1 ? (submitting ? "Submitting…" : "Finish setup") : "Continue"}{" "}
+              <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
           )}
         </div>
@@ -534,7 +612,15 @@ function Onboarding() {
   );
 }
 
-function Panel({ title, sub, children }: { title: string; sub?: string; children: React.ReactNode }) {
+function Panel({
+  title,
+  sub,
+  children,
+}: {
+  title: string;
+  sub?: string;
+  children: React.ReactNode;
+}) {
   return (
     <section>
       <h1 className="text-2xl font-bold">{title}</h1>
