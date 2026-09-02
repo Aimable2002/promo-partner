@@ -44,14 +44,18 @@ function Landing() {
   const { data: masters = [] } = useMastersDirectory();
   const { data: packages = [] } = usePackages();
 
-  const accountIds = useMemo(() => masters.map((m) => m.account_id), [masters]);
-  const statsMap = useMastersStats(accountIds);
+  const statsMap = useMastersStats(masters);
 
   const ranked = useMemo(() => {
     return masters
       .map((m) => ({
         master: m,
-        ...(statsMap.get(m.account_id) ?? { stats: null, trades: [], isLoading: true, isError: false }),
+        ...(statsMap.get(m.account_id) ?? {
+          stats: null,
+          trades: [],
+          isLoading: true,
+          isError: false,
+        }),
       }))
       .sort((a, b) => (b.stats?.roiPct ?? -Infinity) - (a.stats?.roiPct ?? -Infinity));
   }, [masters, statsMap]);
@@ -99,15 +103,14 @@ function Landing() {
             Relay live · {masters.length} verified masters onboard
           </div>
           <h1 className="mt-6 max-w-4xl text-5xl font-bold leading-[1.03] sm:text-6xl lg:text-7xl">
-            Their fill.{" "}
-            <span className="brand-gradient-text">Your account.</span>
+            Their fill. <span className="brand-gradient-text">Your account.</span>
             <br />
             Thirty-eight milliseconds apart.
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-muted-foreground">
             CopyDesk mirrors a master trader's live forex and CFD positions straight into your own
-            MT5 or cTrader account at your broker — sized to your equity, your risk, your rules.
-            No pooled funds. No withdrawal of your capital. Ever.
+            MT5 or cTrader account at your broker — sized to your equity, your risk, your rules. No
+            pooled funds. No withdrawal of your capital. Ever.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Button asChild size="lg">
@@ -138,7 +141,10 @@ function Landing() {
           <div className="relative flex overflow-hidden border-t border-border bg-surface/60 py-2.5">
             <div className="ticker-track flex shrink-0 gap-8 whitespace-nowrap px-4">
               {[...symbols, ...symbols].map((s, i) => (
-                <span key={s + i} className="num flex items-center gap-2 text-xs text-muted-foreground">
+                <span
+                  key={s + i}
+                  className="num flex items-center gap-2 text-xs text-muted-foreground"
+                >
                   {s}
                 </span>
               ))}
@@ -155,11 +161,17 @@ function Landing() {
               Connects to any MT5-based broker — plus cTrader for masters
             </p>
             <div className="flex flex-wrap items-center gap-x-8 gap-y-3 font-display text-sm font-semibold text-muted-foreground">
-              {["IC Markets", "Pepperstone", "Exness", "Vantage", "FXPesa", "FxPro (cTrader)", "Axi (cTrader)"].map(
-                (b) => (
-                  <span key={b}>{b}</span>
-                ),
-              )}
+              {[
+                "IC Markets",
+                "Pepperstone",
+                "Exness",
+                "Vantage",
+                "FXPesa",
+                "FxPro (cTrader)",
+                "Axi (cTrader)",
+              ].map((b) => (
+                <span key={b}>{b}</span>
+              ))}
             </div>
           </div>
         </div>
@@ -282,7 +294,9 @@ function Landing() {
                 <div className="flex items-center gap-3">
                   <Avatar name={m.display_name ?? "Master"} />
                   <div className="min-w-0">
-                    <div className="truncate font-semibold">{m.display_name ?? "Unnamed master"}</div>
+                    <div className="truncate font-semibold">
+                      {m.display_name ?? "Unnamed master"}
+                    </div>
                     <div className="truncate text-xs text-muted-foreground">
                       {m.platform ?? "—"}
                       {m.broker ? ` · ${m.broker}` : ""}
@@ -319,21 +333,33 @@ function Landing() {
                 </div>
                 <div className="mt-4 grid grid-cols-3 gap-3 border-t border-border pt-4 text-center">
                   <div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">ROI</div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      ROI
+                    </div>
                     {stats ? (
-                      <PnL value={stats.roiPct} prefix="" suffix="%" digits={1} className="text-sm" />
+                      <PnL
+                        value={stats.roiPct}
+                        prefix=""
+                        suffix="%"
+                        digits={1}
+                        className="text-sm"
+                      />
                     ) : (
                       <div className="num text-sm text-muted-foreground">—</div>
                     )}
                   </div>
                   <div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Max DD</div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      Max DD
+                    </div>
                     <div className="num text-sm font-medium text-warn">
                       {stats ? `${stats.maxDrawdownPct}%` : "—"}
                     </div>
                   </div>
                   <div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Trades</div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      Trades
+                    </div>
                     <div className="num text-sm font-medium">
                       {stats ? stats.closedTrades.toLocaleString() : "—"}
                     </div>
@@ -362,8 +388,8 @@ function Landing() {
                   <span className="text-sm font-normal text-muted-foreground">/mo</span>
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  {p.base_roster_size} roster slot{p.base_roster_size === 1 ? "" : "s"} included · billed
-                  every {p.duration_days} days
+                  {p.base_roster_size} roster slot{p.base_roster_size === 1 ? "" : "s"} included ·
+                  billed every {p.duration_days} days
                 </p>
                 <ul className="mt-6 flex-1 space-y-2.5 text-sm">
                   {[
@@ -388,7 +414,10 @@ function Landing() {
 
       {/* CTA */}
       <section className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-0" style={{ background: "var(--gradient-glow)" }} />
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{ background: "var(--gradient-glow)" }}
+        />
         <div className="relative mx-auto max-w-3xl px-5 py-24 text-center">
           <Gauge className="mx-auto h-8 w-8 text-primary" />
           <h2 className="mt-6 text-4xl font-bold sm:text-5xl">
