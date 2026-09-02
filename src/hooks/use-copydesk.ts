@@ -7,9 +7,11 @@ import {
   fetchMyAccounts,
   fetchActivePackages,
   fetchActiveSubscription,
+  fetchActiveBillingPeriod,
   type AccountRow,
   type LiveAccountStateRow,
   type SubscriptionRow,
+  type BillingPeriodRow,
 } from "@/lib/supabase";
 import { endpoints, type DirectoryMaster, type Deal } from "@/lib/api";
 import { closedDeals, computeStats, type TradeStats } from "@/lib/trades";
@@ -97,10 +99,7 @@ const STORE_KEY = "copydesk.activeAccount";
 /** The account currently in focus across app screens. */
 export function useActiveAccount(filter?: (a: AccountRow) => boolean) {
   const { data: accounts = [], isLoading } = useMyAccounts();
-  const pool = useMemo(
-    () => (filter ? accounts.filter(filter) : accounts),
-    [accounts, filter],
-  );
+  const pool = useMemo(() => (filter ? accounts.filter(filter) : accounts), [accounts, filter]);
   const [id, setId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -222,6 +221,40 @@ export function useAccountTrades(accountId: string | null | undefined) {
 
 export function usePackages() {
   return useQuery({ queryKey: ["packages"], queryFn: fetchActivePackages, staleTime: 300_000 });
+}
+
+/** The signed-in user's current subscription period (per-user, not per
+ *  trading account). Null if they've never subscribed / are between plans. */
+export function useActiveBillingPeriod() {
+  const { session, loading } = useSession();
+  return useQuery({
+    queryKey: ["billing-period", session?.user?.id ?? null],
+    queryFn: fetchActiveBillingPeriod,
+    enabled: !loading && !!session,
+  });
+}
+
+/** How many more FOLLOWER trading accounts the signed-in user is allowed to
+ *  provision right now. Master accounts are exempt from subscriptions and
+ *  never count against or are limited by this. A user with no active
+ *  billing period has a limit of 0 -- they must subscribe before their
+ *  first follower account. */
+export function useFollowerAccountLimit() {
+  const { accounts, isLoading: accountsLoading } = useActiveAccount();
+  const { data: billingPeriod, isLoading: billingLoading } = useActiveBillingPeriod();
+
+  const followerCount = accounts.filter((a) => a.role === "follower").length;
+  const limit = billingPeriod?.max_trading_accounts ?? 0;
+  const remaining = Math.max(0, limit - followerCount);
+
+  return {
+    followerCount,
+    limit,
+    remaining,
+    atLimit: remaining <= 0,
+    billingPeriod,
+    isLoading: accountsLoading || billingLoading,
+  };
 }
 
 /* ------------------------------------------------------- subscriptions */
