@@ -32,7 +32,6 @@ import {
   useMasterTrades,
   useMyAccounts,
   useMasterFollowers,
-  useLiveAccountState,
 } from "@/hooks/use-copydesk";
 
 export const Route = createFileRoute("/masters/$masterId")({
@@ -60,7 +59,6 @@ function MasterProfile() {
   const { data: directory = [], isLoading: directoryLoading } = useMastersDirectory();
   const { data: deals = [], isLoading: tradesLoading } = useMasterTrades(masterId);
   const { data: myAccounts = [] } = useMyAccounts();
-  const liveState = useLiveAccountState(masterId ? [masterId] : []);
 
   const m = directory.find((x) => x.account_id === masterId);
   const isOwner = myAccounts.some((a) => a.account_id === masterId);
@@ -98,7 +96,12 @@ function MasterProfile() {
   }
 
   const closed = closedDeals(deals);
-  const currentBalance = masterId ? liveState[masterId]?.balance : null;
+  // From the directory (resolved backend-side with the service-role
+  // client for every public master) rather than a direct Supabase read of
+  // live_account_state, which only this master's own owner could read -
+  // that's what made ROI/starting balance silently come back as 0 for
+  // every other viewer.
+  const currentBalance = m.balance;
   const realizedNet = closed.reduce((s, d) => s + (Number(d.pnl) || 0), 0);
   const startingBalance = currentBalance != null ? currentBalance - realizedNet : 0;
   const stats = computeStats(deals, startingBalance);
@@ -111,7 +114,10 @@ function MasterProfile() {
       title={m.display_name ?? m.account_id}
       subtitle={`${m.broker ?? "—"} · ${m.platform ?? "—"}`}
       actions={
-        <Button size="sm" onClick={() => toast.success(`Copy setup started for ${m.display_name ?? m.account_id}`)}>
+        <Button
+          size="sm"
+          onClick={() => toast.success(`Copy setup started for ${m.display_name ?? m.account_id}`)}
+        >
           Copy this master
         </Button>
       }
@@ -131,14 +137,33 @@ function MasterProfile() {
       </div>
 
       {tradesLoading ? (
-        <div className="mt-6 p-10 text-center text-sm text-muted-foreground">Loading trade history…</div>
+        <div className="mt-6 p-10 text-center text-sm text-muted-foreground">
+          Loading trade history…
+        </div>
       ) : (
         <>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <Stat label="ROI" value={<PnL value={stats.roiPct} prefix="" suffix="%" digits={1} className="text-2xl" />} />
-            <Stat label="Net P&L (all time)" value={<PnL value={stats.netPnl} digits={0} className="text-2xl" />} />
-            <Stat label="Max drawdown" value={`${stats.maxDrawdownPct}%`} hint={`Risk score ${stats.riskScore}/10`} />
-            <Stat label="Profit factor" value={stats.profitFactor.toFixed(2)} accent hint={`${stats.closedTrades} closed trades`} />
+            <Stat
+              label="ROI"
+              value={
+                <PnL value={stats.roiPct} prefix="" suffix="%" digits={1} className="text-2xl" />
+              }
+            />
+            <Stat
+              label="Net P&L (all time)"
+              value={<PnL value={stats.netPnl} digits={0} className="text-2xl" />}
+            />
+            <Stat
+              label="Max drawdown"
+              value={`${stats.maxDrawdownPct}%`}
+              hint={`Risk score ${stats.riskScore}/10`}
+            />
+            <Stat
+              label="Profit factor"
+              value={stats.profitFactor.toFixed(2)}
+              accent
+              hint={`${stats.closedTrades} closed trades`}
+            />
           </div>
 
           <div className="mt-6 grid gap-6 lg:grid-cols-3">
@@ -154,10 +179,27 @@ function MasterProfile() {
                       </linearGradient>
                     </defs>
                     <CartesianGrid stroke="var(--border)" vertical={false} />
-                    <XAxis dataKey="t" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} minTickGap={50} />
-                    <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} width={60} />
+                    <XAxis
+                      dataKey="t"
+                      tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                      tickLine={false}
+                      axisLine={false}
+                      minTickGap={50}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                      tickLine={false}
+                      axisLine={false}
+                      width={60}
+                    />
                     <Tooltip contentStyle={tt} />
-                    <Area type="monotone" dataKey="equity" stroke="var(--brand)" strokeWidth={2} fill="url(#mp)" />
+                    <Area
+                      type="monotone"
+                      dataKey="equity"
+                      stroke="var(--brand)"
+                      strokeWidth={2}
+                      fill="url(#mp)"
+                    />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -186,7 +228,10 @@ function MasterProfile() {
               <dl className="mt-6 space-y-2.5 border-t border-border pt-5 text-sm">
                 <KV k="Average win" v={<PnL value={stats.avgWin} className="text-sm" />} />
                 <KV k="Average loss" v={<PnL value={stats.avgLoss} className="text-sm" />} />
-                <KV k="Track record" v={<span className="num">{stats.trackRecordMonths} months</span>} />
+                <KV
+                  k="Track record"
+                  v={<span className="num">{stats.trackRecordMonths} months</span>}
+                />
               </dl>
             </div>
           </div>
@@ -198,8 +243,18 @@ function MasterProfile() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={symbolBreakdown}>
                     <CartesianGrid stroke="var(--border)" vertical={false} />
-                    <XAxis dataKey="symbol" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} width={56} />
+                    <XAxis
+                      dataKey="symbol"
+                      tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                      tickLine={false}
+                      axisLine={false}
+                      width={56}
+                    />
                     <Tooltip contentStyle={tt} cursor={{ fill: "var(--accent)" }} />
                     <Bar dataKey="pnl" radius={[3, 3, 0, 0]}>
                       {symbolBreakdown.map((s) => (
@@ -217,8 +272,18 @@ function MasterProfile() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={hourBreakdown}>
                     <CartesianGrid stroke="var(--border)" vertical={false} />
-                    <XAxis dataKey="hour" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} width={36} />
+                    <XAxis
+                      dataKey="hour"
+                      tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                      tickLine={false}
+                      axisLine={false}
+                      width={36}
+                    />
                     <Tooltip contentStyle={tt} cursor={{ fill: "var(--accent)" }} />
                     <Bar dataKey="trades" fill="var(--chart-2)" radius={[3, 3, 0, 0]} />
                   </BarChart>
@@ -249,12 +314,18 @@ function MasterProfile() {
                   <TableRow key={String(t.deal_ticket)}>
                     <TableCell className="num font-medium">{t.symbol}</TableCell>
                     <TableCell>
-                      <span className={t.type?.toLowerCase().includes("sell") ? "text-short" : "text-long"}>
+                      <span
+                        className={
+                          t.type?.toLowerCase().includes("sell") ? "text-short" : "text-long"
+                        }
+                      >
                         {t.type?.toLowerCase().includes("sell") ? "SELL" : "BUY"}
                       </span>
                     </TableCell>
                     <TableCell className="num text-right">{Number(t.lots).toFixed(2)}</TableCell>
-                    <TableCell className="num text-xs text-muted-foreground">{fmtTime(t.deal_time)}</TableCell>
+                    <TableCell className="num text-xs text-muted-foreground">
+                      {fmtTime(t.deal_time)}
+                    </TableCell>
                     <TableCell className="text-right">
                       <PnL value={Number(t.pnl) || 0} className="text-sm" />
                     </TableCell>
@@ -326,7 +397,9 @@ function MasterProfile() {
               >
                 <Avatar name={x.display_name ?? x.account_id} size={34} />
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium">{x.display_name ?? x.account_id}</div>
+                  <div className="truncate text-sm font-medium">
+                    {x.display_name ?? x.account_id}
+                  </div>
                   <div className="truncate text-xs text-muted-foreground">{x.bio}</div>
                 </div>
               </Link>
