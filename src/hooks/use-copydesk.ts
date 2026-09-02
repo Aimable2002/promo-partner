@@ -276,8 +276,15 @@ export function useAccountSubscriptions(accountIds: string[]) {
 
 /* --------------------------------------------------- master perf stats */
 
-export function useMastersStats(accountIds: string[]) {
-  const ids = useMemo(() => accountIds.slice(), [accountIds.join(",")]);
+/** Takes the master rows from useMastersDirectory() directly (not raw
+ *  account_ids) so it can read each master's balance from `master.balance`
+ *  -- resolved backend-side for every public master, not from a direct
+ *  Supabase read of live_account_state, which only a master's own owner
+ *  can see under RLS. Using the directory's balance instead of
+ *  useLiveAccountState fixes ROI showing 0 for anyone but the account
+ *  owner. */
+export function useMastersStats(masters: DirectoryMaster[]) {
+  const ids = useMemo(() => masters.map((m) => m.account_id), [masters]);
   const queries = useQueries({
     queries: ids.map((id) => ({
       queryKey: ["master-trades", id],
@@ -285,26 +292,22 @@ export function useMastersStats(accountIds: string[]) {
       staleTime: 60_000,
     })),
   });
-  // Public masters' live_account_state rows are now readable (RLS opened
-  // up for is_public masters) - use the real current balance to back out
-  // a startingBalance instead of assuming every master started at 0.
-  const live = useLiveAccountState(ids);
 
   return useMemo(() => {
     const map = new Map<
       string,
       { stats: TradeStats | null; trades: Deal[]; isLoading: boolean; isError: boolean }
     >();
-    ids.forEach((id, i) => {
+    masters.forEach((master, i) => {
       const q = queries[i];
       const trades = q?.data ?? [];
-      const currentBalance = live[id]?.balance;
+      const currentBalance = master.balance;
       let startingBalance = 0;
       if (currentBalance != null) {
         const realizedNet = closedDeals(trades).reduce((s, d) => s + (Number(d.pnl) || 0), 0);
         startingBalance = currentBalance - realizedNet;
       }
-      map.set(id, {
+      map.set(master.account_id, {
         stats: q?.data ? computeStats(q.data, startingBalance) : null,
         trades,
         isLoading: q?.isLoading ?? false,
@@ -313,7 +316,7 @@ export function useMastersStats(accountIds: string[]) {
     });
     return map;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ids, queries.map((q) => q.dataUpdatedAt).join(","), live]);
+  }, [masters, queries.map((q) => q.dataUpdatedAt).join(",")]);
 }
 
 export function useMasterFollowers(accountId: string | null | undefined) {
