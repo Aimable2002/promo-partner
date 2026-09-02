@@ -1,7 +1,7 @@
 import { supabase } from "./supabase";
 
 export const API_BASE_URL =
-  import.meta.env['VITE_API_BASE_URL'] ?? "https://surviving-cork-lushness.ngrok-free.dev";
+  import.meta.env["VITE_API_BASE_URL"] ?? "https://surviving-cork-lushness.ngrok-free.dev";
 
 export class ApiError extends Error {
   status: number;
@@ -16,7 +16,9 @@ function detailToMessage(detail: unknown, fallback: string): string {
   if (typeof detail === "string") return detail;
   if (Array.isArray(detail)) {
     const msgs = detail
-      .map((d) => (d && typeof d === "object" && "msg" in d ? String((d as { msg: unknown }).msg) : null))
+      .map((d) =>
+        d && typeof d === "object" && "msg" in d ? String((d as { msg: unknown }).msg) : null,
+      )
       .filter(Boolean);
     if (msgs.length) return msgs.join(", ");
   }
@@ -31,7 +33,10 @@ type RequestOptions = {
   signal?: AbortSignal;
 };
 
-export async function apiFetch<T = unknown>(path: string, options: RequestOptions = {}): Promise<T> {
+export async function apiFetch<T = unknown>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> {
   const { method = "GET", body, anonymous = false, signal } = options;
 
   const headers: Record<string, string> = {
@@ -109,6 +114,11 @@ export type DirectoryMaster = {
   country: string | null;
   platform: string | null;
   broker: string | null;
+  /** From live_account_state, resolved backend-side with the service-role
+   *  client - not readable directly by a non-owner via Supabase RLS, so
+   *  this is the only reliable source for a public master's balance. */
+  balance: number | null;
+  equity: number | null;
 };
 
 export type MasterFollower = {
@@ -297,11 +307,11 @@ export const endpoints = {
     api.post(`/masters/${accountId}/challenges/${challengeId}/leave`),
 
   /* ------------------------------------------------------------ billing */
-  billing: (accountId: string) => api.get<Record<string, unknown>>(`/accounts/${accountId}/billing`),
+  billing: (accountId: string) =>
+    api.get<Record<string, unknown>>(`/accounts/${accountId}/billing`),
   selectPackage: (accountId: string, packageCode: string) =>
     api.post(`/accounts/${accountId}/billing/select-package`, { package_code: packageCode }),
-  reactivateBilling: (accountId: string) =>
-    api.post(`/accounts/${accountId}/billing/reactivate`),
+  reactivateBilling: (accountId: string) => api.post(`/accounts/${accountId}/billing/reactivate`),
 
   /* ---------------------------------------------------------- payments */
   checkout: (body: CheckoutBody) => api.post<Record<string, unknown>>("/payments/checkout", body),
@@ -318,7 +328,8 @@ export const endpoints = {
     api.get("/admin/users").then((r) => unwrapList<Record<string, unknown>>(r, "users")),
   adminMasters: () =>
     api.get("/admin/masters").then((r) => unwrapList<Record<string, unknown>>(r, "masters")),
-  adminMaster: (accountId: string) => api.get<Record<string, unknown>>(`/admin/masters/${accountId}`),
+  adminMaster: (accountId: string) =>
+    api.get<Record<string, unknown>>(`/admin/masters/${accountId}`),
   adminSetMasterPublic: (accountId: string, isPublic: boolean) =>
     api.post(`/admin/masters/${accountId}/public`, { public: isPublic, is_public: isPublic }),
   adminPayouts: () =>
