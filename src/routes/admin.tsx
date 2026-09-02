@@ -28,7 +28,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ApiError, endpoints } from "@/lib/api";
-import { supabase, type ChallengeRow } from "@/lib/supabase";
+import {
+  supabase,
+  fetchAllPackages,
+  createPackage,
+  updatePackage,
+  setPackageActive,
+  type ChallengeRow,
+  type PackageRow,
+  type NewPackageInput,
+} from "@/lib/supabase";
 import {
   createPromoCodes,
   deletePromoCode,
@@ -37,6 +46,7 @@ import {
   type PromoCodeRow,
 } from "@/lib/promo";
 import { fmtDate, fmtMoney } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { useRequireAdmin, usePackages } from "@/hooks/use-copydesk";
 
 export const Route = createFileRoute("/admin")({
@@ -62,6 +72,15 @@ function num(v: unknown): number {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 }
+
+const EMPTY_PACKAGE_FORM: NewPackageInput = {
+  code: "",
+  duration_days: 30,
+  infra_fee: 0,
+  slot_fee_per_slot: 0,
+  base_roster_size: 1,
+  max_trading_accounts: 1,
+};
 
 const EMPTY_CHALLENGE_FORM: Omit<ChallengeRow, "id" | "created_at"> = {
   name: "",
@@ -90,9 +109,21 @@ function Admin() {
     queryFn: endpoints.adminTopMasters,
     enabled: isAdmin,
   });
-  const usersQuery = useQuery({ queryKey: ["admin-users"], queryFn: endpoints.adminUsers, enabled: isAdmin });
-  const payoutsQuery = useQuery({ queryKey: ["admin-payouts"], queryFn: endpoints.adminPayouts, enabled: isAdmin });
-  const mastersQuery = useQuery({ queryKey: ["admin-masters"], queryFn: endpoints.adminMasters, enabled: isAdmin });
+  const usersQuery = useQuery({
+    queryKey: ["admin-users"],
+    queryFn: endpoints.adminUsers,
+    enabled: isAdmin,
+  });
+  const payoutsQuery = useQuery({
+    queryKey: ["admin-payouts"],
+    queryFn: endpoints.adminPayouts,
+    enabled: isAdmin,
+  });
+  const mastersQuery = useQuery({
+    queryKey: ["admin-masters"],
+    queryFn: endpoints.adminMasters,
+    enabled: isAdmin,
+  });
   const challengesQuery = useQuery({
     queryKey: ["admin-challenges"],
     enabled: isAdmin,
@@ -105,6 +136,64 @@ function Admin() {
       return (data ?? []) as ChallengeRow[];
     },
   });
+
+  const packagesQuery = useQuery({
+    queryKey: ["admin-packages"],
+    queryFn: fetchAllPackages,
+    enabled: isAdmin,
+  });
+
+  const [packageForm, setPackageForm] = useState<NewPackageInput>(EMPTY_PACKAGE_FORM);
+  const [editingPackageCode, setEditingPackageCode] = useState<string | null>(null);
+
+  const startEditPackage = (p: PackageRow) => {
+    setPackageForm({
+      code: p.code,
+      duration_days: p.duration_days,
+      infra_fee: p.infra_fee,
+      slot_fee_per_slot: p.slot_fee_per_slot,
+      base_roster_size: p.base_roster_size,
+      max_trading_accounts: p.max_trading_accounts,
+    });
+    setEditingPackageCode(p.code);
+  };
+
+  const cancelEditPackage = () => {
+    setPackageForm(EMPTY_PACKAGE_FORM);
+    setEditingPackageCode(null);
+  };
+
+  const savePackage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const isEditing = editingPackageCode !== null;
+    try {
+      if (isEditing) {
+        const { code: _code, ...patch } = packageForm;
+        await updatePackage(editingPackageCode!, patch);
+        toast.success("Package updated");
+      } else {
+        await createPackage(packageForm);
+        toast.success("Package created");
+      }
+      cancelEditPackage();
+      queryClient.invalidateQueries({ queryKey: ["admin-packages"] });
+      queryClient.invalidateQueries({ queryKey: ["packages"] });
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : `Could not ${isEditing ? "update" : "create"} package`,
+      );
+    }
+  };
+
+  const togglePackageActive = async (p: PackageRow) => {
+    try {
+      await setPackageActive(p.code, !p.is_active);
+      queryClient.invalidateQueries({ queryKey: ["admin-packages"] });
+      queryClient.invalidateQueries({ queryKey: ["packages"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not update package");
+    }
+  };
 
   const [form, setForm] = useState(EMPTY_CHALLENGE_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -157,8 +246,7 @@ function Admin() {
     // this save is about to hand that flag to a *different* challenge -
     // editing the fixed challenge itself while leaving is_fixed on is a
     // no-op, not a hand-off.
-    const willReassignFixed =
-      form.is_fixed && fixedChallenge && fixedChallenge.id !== editingId;
+    const willReassignFixed = form.is_fixed && fixedChallenge && fixedChallenge.id !== editingId;
     if (willReassignFixed) {
       toast.message(`Saving will unset "mandatory first" on ${fixedChallenge!.name}`);
     }
@@ -178,7 +266,9 @@ function Admin() {
       cancelEdit();
       queryClient.invalidateQueries({ queryKey: ["admin-challenges"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : `Could not ${isEditing ? "update" : "create"} challenge`);
+      toast.error(
+        e instanceof Error ? e.message : `Could not ${isEditing ? "update" : "create"} challenge`,
+      );
     }
   };
 
@@ -209,7 +299,10 @@ function Admin() {
         { label: "At-risk accounts", value: String(num(summary.at_risk_wallets_count)) },
         { label: "Copied today", value: String(num(summary.copied_today)) },
         { label: "Failed copies (24h)", value: String(num(summary.failed_copies_24h)) },
-        { label: "Failed copy rate (24h)", value: `${num(summary.failed_copies_pct_24h).toFixed(1)}%` },
+        {
+          label: "Failed copy rate (24h)",
+          value: `${num(summary.failed_copies_pct_24h).toFixed(1)}%`,
+        },
       ]
     : [];
 
@@ -234,7 +327,9 @@ function Admin() {
     >
       {summaryQuery.isError ? (
         <div className="panel p-6 text-sm text-destructive">
-          {summaryQuery.error instanceof ApiError ? summaryQuery.error.message : "Could not load summary."}
+          {summaryQuery.error instanceof ApiError
+            ? summaryQuery.error.message
+            : "Could not load summary."}
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -249,6 +344,7 @@ function Admin() {
           <TabsTrigger value="payouts">Payouts ({pending.length})</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="challenges">Challenges</TabsTrigger>
+          <TabsTrigger value="packages">Packages</TabsTrigger>
           <TabsTrigger value="directory">Directory</TabsTrigger>
           <TabsTrigger value="promos">Promo codes</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
@@ -257,7 +353,9 @@ function Admin() {
         <TabsContent value="payouts" className="mt-5">
           {payoutsQuery.isError ? (
             <div className="panel p-6 text-sm text-destructive">
-              {payoutsQuery.error instanceof ApiError ? payoutsQuery.error.message : "Could not load payouts."}
+              {payoutsQuery.error instanceof ApiError
+                ? payoutsQuery.error.message
+                : "Could not load payouts."}
             </div>
           ) : (
             <div className="panel overflow-x-auto">
@@ -283,9 +381,15 @@ function Admin() {
                         <TableCell className="num">{id}</TableCell>
                         <TableCell>{String(p.master_account_id ?? p.master ?? "—")}</TableCell>
                         <TableCell className="num">{fmtMoney(num(p.amount))}</TableCell>
-                        <TableCell className="text-muted-foreground">{String(p.payout_method ?? "—")}</TableCell>
-                        <TableCell className="num text-xs">{String(p.payout_account_number ?? "—")}</TableCell>
-                        <TableCell className="num text-muted-foreground">{fmtDate(p.created_at as string | undefined)}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {String(p.payout_method ?? "—")}
+                        </TableCell>
+                        <TableCell className="num text-xs">
+                          {String(p.payout_account_number ?? "—")}
+                        </TableCell>
+                        <TableCell className="num text-muted-foreground">
+                          {fmtDate(p.created_at as string | undefined)}
+                        </TableCell>
                         <TableCell>
                           <StatusDot status={status} />
                         </TableCell>
@@ -295,7 +399,11 @@ function Admin() {
                               <Button size="sm" onClick={() => decide(id, "approve")}>
                                 <Check className="h-3.5 w-3.5" />
                               </Button>
-                              <Button size="sm" variant="outline" onClick={() => decide(id, "reject")}>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => decide(id, "reject")}
+                              >
                                 <X className="h-3.5 w-3.5" />
                               </Button>
                             </div>
@@ -315,7 +423,9 @@ function Admin() {
         <TabsContent value="users" className="mt-5">
           {usersQuery.isError ? (
             <div className="panel p-6 text-sm text-destructive">
-              {usersQuery.error instanceof ApiError ? usersQuery.error.message : "Could not load users."}
+              {usersQuery.error instanceof ApiError
+                ? usersQuery.error.message
+                : "Could not load users."}
             </div>
           ) : (
             <div className="panel overflow-x-auto">
@@ -340,14 +450,22 @@ function Admin() {
                       <TableRow key={id}>
                         <TableCell className="num">{id}</TableCell>
                         <TableCell>{email}</TableCell>
-                        <TableCell className="capitalize text-muted-foreground">{String(u.role ?? "—")}</TableCell>
+                        <TableCell className="capitalize text-muted-foreground">
+                          {String(u.role ?? "—")}
+                        </TableCell>
                         <TableCell className="num">{String(u.accounts ?? "—")}</TableCell>
-                        <TableCell className="num text-muted-foreground">{fmtDate(u.joined as string | undefined)}</TableCell>
+                        <TableCell className="num text-muted-foreground">
+                          {fmtDate(u.joined as string | undefined)}
+                        </TableCell>
                         <TableCell>
                           <StatusDot status={status} />
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button size="sm" variant="outline" onClick={() => toggleUserAction(email, status)}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => toggleUserAction(email, status)}
+                          >
                             {status === "suspended" ? "Reinstate" : "Suspend"}
                           </Button>
                         </TableCell>
@@ -371,7 +489,9 @@ function Admin() {
                     <div className="flex flex-wrap items-center gap-3">
                       <div className="font-display font-semibold">{c.name}</div>
                       {c.is_fixed && <Badge>Mandatory first</Badge>}
-                      <span className="num ml-auto text-sm text-muted-foreground">Fee {fmtMoney(c.fee)}</span>
+                      <span className="num ml-auto text-sm text-muted-foreground">
+                        Fee {fmtMoney(c.fee)}
+                      </span>
                       <Button size="sm" variant="outline" onClick={() => startEdit(c)}>
                         Edit
                       </Button>
@@ -384,7 +504,8 @@ function Admin() {
                       <Field k="Min days" v={String(c.min_days)} />
                     </div>
                     <p className="mt-4 text-xs text-muted-foreground">
-                      Reward: {c.reward_amount ? `${fmtMoney(c.reward_amount)} reward` : "no reward"}
+                      Reward:{" "}
+                      {c.reward_amount ? `${fmtMoney(c.reward_amount)} reward` : "no reward"}
                     </p>
                   </div>
                 ))}
@@ -403,37 +524,89 @@ function Admin() {
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="pn">Program name</Label>
-                  <Input id="pn" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+                  <Input
+                    id="pn"
+                    value={form.name}
+                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="ds">Description</Label>
-                  <Textarea id="ds" value={form.description ?? ""} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
+                  <Textarea
+                    id="ds"
+                    value={form.description ?? ""}
+                    onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                  />
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label htmlFor="fe">Entry fee</Label>
-                    <Input id="fe" className="num" type="number" value={form.fee} onChange={(e) => setForm((f) => ({ ...f, fee: Number(e.target.value) }))} />
+                    <Input
+                      id="fe"
+                      className="num"
+                      type="number"
+                      value={form.fee}
+                      onChange={(e) => setForm((f) => ({ ...f, fee: Number(e.target.value) }))}
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="pt">Profit target %</Label>
-                    <Input id="pt" className="num" type="number" value={form.profit_target_pct} onChange={(e) => setForm((f) => ({ ...f, profit_target_pct: Number(e.target.value) }))} />
+                    <Input
+                      id="pt"
+                      className="num"
+                      type="number"
+                      value={form.profit_target_pct}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, profit_target_pct: Number(e.target.value) }))
+                      }
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="dl">Max daily loss %</Label>
-                    <Input id="dl" className="num" type="number" value={form.max_daily_loss_pct} onChange={(e) => setForm((f) => ({ ...f, max_daily_loss_pct: Number(e.target.value) }))} />
+                    <Input
+                      id="dl"
+                      className="num"
+                      type="number"
+                      value={form.max_daily_loss_pct}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, max_daily_loss_pct: Number(e.target.value) }))
+                      }
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="dd">Max drawdown %</Label>
-                    <Input id="dd" className="num" type="number" value={form.max_drawdown_pct} onChange={(e) => setForm((f) => ({ ...f, max_drawdown_pct: Number(e.target.value) }))} />
+                    <Input
+                      id="dd"
+                      className="num"
+                      type="number"
+                      value={form.max_drawdown_pct}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, max_drawdown_pct: Number(e.target.value) }))
+                      }
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="md">Minimum days</Label>
-                    <Input id="md" className="num" type="number" value={form.min_days} onChange={(e) => setForm((f) => ({ ...f, min_days: Number(e.target.value) }))} />
+                    <Input
+                      id="md"
+                      className="num"
+                      type="number"
+                      value={form.min_days}
+                      onChange={(e) => setForm((f) => ({ ...f, min_days: Number(e.target.value) }))}
+                    />
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="ra">Reward amount (USD)</Label>
-                  <Input id="ra" className="num" type="number" value={form.reward_amount ?? 0} onChange={(e) => setForm((f) => ({ ...f, reward_amount: Number(e.target.value) }))} />
+                  <Input
+                    id="ra"
+                    className="num"
+                    type="number"
+                    value={form.reward_amount ?? 0}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, reward_amount: Number(e.target.value) }))
+                    }
+                  />
                 </div>
                 <div className="flex items-center justify-between rounded-md border border-border p-3">
                   <div>
@@ -444,7 +617,11 @@ function Admin() {
                       </p>
                     )}
                   </div>
-                  <Switch id="fixed" checked={form.is_fixed} onCheckedChange={(v) => setForm((f) => ({ ...f, is_fixed: v }))} />
+                  <Switch
+                    id="fixed"
+                    checked={form.is_fixed}
+                    onCheckedChange={(v) => setForm((f) => ({ ...f, is_fixed: v }))}
+                  />
                 </div>
                 <Button type="submit" className="w-full">
                   {editingId ? "Save changes" : "Create program"}
@@ -454,10 +631,145 @@ function Admin() {
           )}
         </TabsContent>
 
+        <TabsContent value="packages" className="mt-5">
+          {packagesQuery.isError ? (
+            <div className="panel p-6 text-sm text-destructive">Could not load packages.</div>
+          ) : (
+            <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
+              <div className="space-y-4">
+                {(packagesQuery.data ?? []).map((p) => (
+                  <div key={p.code} className={cn("panel p-5", !p.is_active && "opacity-60")}>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="font-display font-semibold">{p.code}</div>
+                      {!p.is_active && <Badge variant="outline">Disabled</Badge>}
+                      <span className="num ml-auto text-sm text-muted-foreground">
+                        {fmtMoney(p.infra_fee)} + {fmtMoney(p.slot_fee_per_slot)}/slot
+                      </span>
+                      <Button size="sm" variant="outline" onClick={() => startEditPackage(p)}>
+                        Edit
+                      </Button>
+                      <Switch
+                        checked={p.is_active}
+                        onCheckedChange={() => togglePackageActive(p)}
+                      />
+                    </div>
+                    <div className="num mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+                      <Field k="Duration" v={`${p.duration_days} days`} />
+                      <Field k="Base roster size" v={String(p.base_roster_size)} />
+                      <Field k="Follower accounts" v={String(p.max_trading_accounts)} />
+                      <Field k="Slot fee" v={fmtMoney(p.slot_fee_per_slot)} />
+                    </div>
+                    <p className="mt-4 text-xs text-muted-foreground">
+                      Follower accounts is the max number of follower trading accounts a subscriber
+                      on this plan may provision. Masters are exempt.
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <form className="panel h-fit space-y-4 p-5" onSubmit={savePackage}>
+                <div className="flex items-center justify-between">
+                  <div className="font-display font-semibold">
+                    {editingPackageCode ? "Edit package" : "New package"}
+                  </div>
+                  {editingPackageCode && (
+                    <Button type="button" size="sm" variant="ghost" onClick={cancelEditPackage}>
+                      Cancel
+                    </Button>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="pkcode">Code</Label>
+                  <Input
+                    id="pkcode"
+                    value={packageForm.code}
+                    disabled={!!editingPackageCode}
+                    onChange={(e) => setPackageForm((f) => ({ ...f, code: e.target.value }))}
+                  />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pkdd">Duration (days)</Label>
+                    <Input
+                      id="pkdd"
+                      className="num"
+                      type="number"
+                      value={packageForm.duration_days}
+                      onChange={(e) =>
+                        setPackageForm((f) => ({ ...f, duration_days: Number(e.target.value) }))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pkif">Infra fee (USD)</Label>
+                    <Input
+                      id="pkif"
+                      className="num"
+                      type="number"
+                      value={packageForm.infra_fee}
+                      onChange={(e) =>
+                        setPackageForm((f) => ({ ...f, infra_fee: Number(e.target.value) }))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pksf">Slot fee (per slot, USD)</Label>
+                    <Input
+                      id="pksf"
+                      className="num"
+                      type="number"
+                      value={packageForm.slot_fee_per_slot}
+                      onChange={(e) =>
+                        setPackageForm((f) => ({ ...f, slot_fee_per_slot: Number(e.target.value) }))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pkrs">Base roster size</Label>
+                    <Input
+                      id="pkrs"
+                      className="num"
+                      type="number"
+                      value={packageForm.base_roster_size}
+                      onChange={(e) =>
+                        setPackageForm((f) => ({ ...f, base_roster_size: Number(e.target.value) }))
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="pkfa">Max follower trading accounts</Label>
+                  <Input
+                    id="pkfa"
+                    className="num"
+                    type="number"
+                    min={0}
+                    value={packageForm.max_trading_accounts}
+                    onChange={(e) =>
+                      setPackageForm((f) => ({
+                        ...f,
+                        max_trading_accounts: Number(e.target.value),
+                      }))
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Applies only to follower accounts. Masters can always provision an account.
+                  </p>
+                </div>
+                <Button type="submit" className="w-full">
+                  {editingPackageCode ? "Save changes" : "Create package"}
+                </Button>
+              </form>
+            </div>
+          )}
+        </TabsContent>
+
         <TabsContent value="directory" className="mt-5">
           {mastersQuery.isError ? (
             <div className="panel p-6 text-sm text-destructive">
-              {mastersQuery.error instanceof ApiError ? mastersQuery.error.message : "Could not load masters."}
+              {mastersQuery.error instanceof ApiError
+                ? mastersQuery.error.message
+                : "Could not load masters."}
             </div>
           ) : (
             <div className="space-y-3">
@@ -469,7 +781,8 @@ function Admin() {
                     <div className="min-w-40">
                       <div className="font-medium">{String(m.display_name ?? id)}</div>
                       <div className="num text-xs text-muted-foreground">
-                        {String(m.platform ?? "—")} · {String(m.followers_count ?? m.followers ?? 0)} followers
+                        {String(m.platform ?? "—")} ·{" "}
+                        {String(m.followers_count ?? m.followers ?? 0)} followers
                       </div>
                     </div>
                     <div className="ml-auto flex flex-wrap items-center gap-2">
@@ -510,7 +823,9 @@ function Admin() {
                   {((topMastersQuery.data ?? []) as Record<string, unknown>[]).map((m, i) => (
                     <TableRow key={String(m.account_id ?? i)}>
                       <TableCell>{String(m.display_name ?? m.account_id ?? "—")}</TableCell>
-                      <TableCell className="num">{String(m.followers ?? m.followers_count ?? "—")}</TableCell>
+                      <TableCell className="num">
+                        {String(m.followers ?? m.followers_count ?? "—")}
+                      </TableCell>
                       <TableCell className="num text-right">
                         {m.net_pnl == null ? (
                           <span className="text-muted-foreground">unavailable</span>
@@ -658,7 +973,9 @@ function PromoCodesPanel() {
                       <TableRow key={p.id}>
                         <TableCell className="num font-medium">{p.code}</TableCell>
                         <TableCell className="num">{p.discount_percent}%</TableCell>
-                        <TableCell className="text-muted-foreground">{p.package_code ?? "Any"}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {p.package_code ?? "Any"}
+                        </TableCell>
                         <TableCell className="num text-muted-foreground">
                           {p.expires_at ? fmtDate(p.expires_at) : "—"}
                         </TableCell>
@@ -714,7 +1031,11 @@ function PromoCodesPanel() {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="pp">Prefix</Label>
-            <Input id="pp" value={prefix} onChange={(e) => setPrefix(e.target.value.toUpperCase())} />
+            <Input
+              id="pp"
+              value={prefix}
+              onChange={(e) => setPrefix(e.target.value.toUpperCase())}
+            />
           </div>
         </div>
         <div className="space-y-1.5">
@@ -747,7 +1068,12 @@ function PromoCodesPanel() {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="pe">Expires (optional)</Label>
-          <Input id="pe" type="date" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} />
+          <Input
+            id="pe"
+            type="date"
+            value={expiresAt}
+            onChange={(e) => setExpiresAt(e.target.value)}
+          />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="pnote">Note (optional)</Label>
