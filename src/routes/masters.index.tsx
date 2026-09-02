@@ -40,18 +40,18 @@ function Directory() {
   const [platform, setPlatform] = useState("all");
   const [sort, setSort] = useState("roi");
 
-  const {
-    data: masters = [],
-    isLoading: dirLoading,
-    isError: dirError,
-  } = useMastersDirectory();
-  const accountIds = useMemo(() => masters.map((m) => m.account_id), [masters]);
-  const statsMap = useMastersStats(accountIds);
+  const { data: masters = [], isLoading: dirLoading, isError: dirError } = useMastersDirectory();
+  const statsMap = useMastersStats(masters);
 
   const list = useMemo(() => {
     const enriched = masters.map((m) => ({
       master: m,
-      ...(statsMap.get(m.account_id) ?? { stats: null, trades: [], isLoading: true, isError: false }),
+      ...(statsMap.get(m.account_id) ?? {
+        stats: null,
+        trades: [],
+        isLoading: true,
+        isError: false,
+      }),
     }));
     const needle = q.toLowerCase();
     return enriched
@@ -64,8 +64,10 @@ function Directory() {
         );
       })
       .sort((a, b) => {
-        if (sort === "drawdown") return (a.stats?.maxDrawdownPct ?? Infinity) - (b.stats?.maxDrawdownPct ?? Infinity);
-        if (sort === "winrate") return (b.stats?.winRate ?? -Infinity) - (a.stats?.winRate ?? -Infinity);
+        if (sort === "drawdown")
+          return (a.stats?.maxDrawdownPct ?? Infinity) - (b.stats?.maxDrawdownPct ?? Infinity);
+        if (sort === "winrate")
+          return (b.stats?.winRate ?? -Infinity) - (a.stats?.winRate ?? -Infinity);
         if (sort === "pnl") return (b.stats?.netPnl ?? -Infinity) - (a.stats?.netPnl ?? -Infinity);
         return (b.stats?.roiPct ?? -Infinity) - (a.stats?.roiPct ?? -Infinity);
       });
@@ -125,9 +127,13 @@ function Directory() {
               <Avatar name={m.display_name ?? "Master"} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="truncate font-semibold">{m.display_name ?? "Unnamed master"}</span>
+                  <span className="truncate font-semibold">
+                    {m.display_name ?? "Unnamed master"}
+                  </span>
                 </div>
-                <div className="truncate text-xs text-muted-foreground">{m.bio || "No bio provided"}</div>
+                <div className="truncate text-xs text-muted-foreground">
+                  {m.bio || "No bio provided"}
+                </div>
               </div>
               <Badge variant="outline" className="shrink-0 text-[10px]">
                 {m.platform ?? "—"}
@@ -144,7 +150,13 @@ function Directory() {
                         <stop offset="100%" stopColor="var(--brand)" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <Area type="monotone" dataKey="equity" stroke="var(--brand)" strokeWidth={1.6} fill={`url(#d-${m.account_id})`} />
+                    <Area
+                      type="monotone"
+                      dataKey="equity"
+                      stroke="var(--brand)"
+                      strokeWidth={1.6}
+                      fill={`url(#d-${m.account_id})`}
+                    />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
@@ -155,10 +167,32 @@ function Directory() {
             </div>
 
             <dl className="mt-4 grid grid-cols-2 gap-y-3 border-t border-border pt-4 text-sm">
-              <Row label="Net P&L" value={stats ? <PnL value={stats.netPnl} digits={0} className="text-sm" /> : <span className="text-muted-foreground">—</span>} />
-              <Row label="Max drawdown" value={<span className="num text-warn">{stats ? `${stats.maxDrawdownPct}%` : "—"}</span>} />
-              <Row label="Win rate" value={<span className="num">{stats ? `${stats.winRate}%` : "—"}</span>} />
-              <Row label="Trades" value={<span className="num">{stats ? stats.closedTrades.toLocaleString() : "—"}</span>} />
+              <Row
+                label="Net P&L"
+                value={
+                  stats ? (
+                    <PnL value={stats.netPnl} digits={0} className="text-sm" />
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )
+                }
+              />
+              <Row
+                label="Max drawdown"
+                value={
+                  <span className="num text-warn">{stats ? `${stats.maxDrawdownPct}%` : "—"}</span>
+                }
+              />
+              <Row
+                label="Win rate"
+                value={<span className="num">{stats ? `${stats.winRate}%` : "—"}</span>}
+              />
+              <Row
+                label="Trades"
+                value={
+                  <span className="num">{stats ? stats.closedTrades.toLocaleString() : "—"}</span>
+                }
+              />
               <Row label="Broker" value={<span className="num">{m.broker ?? "—"}</span>} />
               <Row label="Country" value={<span className="num">{m.country ?? "—"}</span>} />
             </dl>
