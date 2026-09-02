@@ -31,7 +31,8 @@ export const Route = createFileRoute("/leaderboard")({
       { property: "og:title", content: "Master leaderboard — ranked performance | CopyDesk" },
       {
         property: "og:description",
-        content: "Compare every CopyDesk master across verified performance metrics computed from fills.",
+        content:
+          "Compare every CopyDesk master across verified performance metrics computed from fills.",
       },
     ],
   }),
@@ -55,17 +56,82 @@ const rtd = (r: Row) => {
 const dash = <span className="num text-sm text-muted-foreground">—</span>;
 
 const COLS: Col[] = [
-  { key: "roi", label: "ROI", get: (r) => r.stats?.roiPct ?? -Infinity, render: (r) => (r.stats ? <PnL value={r.stats.roiPct} prefix="" suffix="%" digits={1} className="text-sm" /> : dash) },
-  { key: "netPnl", label: "Net P&L", get: (r) => r.stats?.netPnl ?? -Infinity, render: (r) => (r.stats ? <PnL value={r.stats.netPnl} digits={0} className="text-sm" /> : dash) },
-  { key: "maxDrawdown", label: "Max DD", get: (r) => -(r.stats?.maxDrawdownPct ?? Infinity), render: (r) => (r.stats ? <span className="num text-warn">{r.stats.maxDrawdownPct}%</span> : dash) },
-  { key: "profitFactor", label: "Profit factor", get: (r) => r.stats?.profitFactor ?? -Infinity, render: (r) => (r.stats ? <span className="num">{r.stats.profitFactor.toFixed(2)}</span> : dash) },
-  { key: "rtd", label: "Return / DD", get: rtd, render: (r) => (r.stats ? <span className="num text-primary">{rtd(r).toFixed(2)}</span> : dash) },
-  { key: "riskScore", label: "Risk score", get: (r) => -(r.stats?.riskScore ?? Infinity), render: (r) => (r.stats ? <span className="num">{r.stats.riskScore}/10</span> : dash) },
-  { key: "avgWin", label: "Avg win", get: (r) => r.stats?.avgWin ?? -Infinity, render: (r) => (r.stats ? <span className="num text-long">{fmtMoney(r.stats.avgWin)}</span> : dash) },
-  { key: "avgLoss", label: "Avg loss", get: (r) => r.stats?.avgLoss ?? Infinity, render: (r) => (r.stats ? <span className="num text-short">{fmtMoney(r.stats.avgLoss)}</span> : dash) },
-  { key: "winRate", label: "Win rate", get: (r) => r.stats?.winRate ?? -Infinity, render: (r) => (r.stats ? <span className="num">{r.stats.winRate}%</span> : dash) },
-  { key: "closedTrades", label: "Trades", get: (r) => r.stats?.closedTrades ?? -Infinity, render: (r) => (r.stats ? <span className="num">{r.stats.closedTrades.toLocaleString()}</span> : dash) },
-  { key: "trackRecordMonths", label: "Track record", get: (r) => r.stats?.trackRecordMonths ?? -Infinity, render: (r) => (r.stats ? <span className="num">{r.stats.trackRecordMonths}mo</span> : dash) },
+  {
+    key: "roi",
+    label: "ROI",
+    get: (r) => r.stats?.roiPct ?? -Infinity,
+    render: (r) =>
+      r.stats ? (
+        <PnL value={r.stats.roiPct} prefix="" suffix="%" digits={1} className="text-sm" />
+      ) : (
+        dash
+      ),
+  },
+  {
+    key: "netPnl",
+    label: "Net P&L",
+    get: (r) => r.stats?.netPnl ?? -Infinity,
+    render: (r) => (r.stats ? <PnL value={r.stats.netPnl} digits={0} className="text-sm" /> : dash),
+  },
+  {
+    key: "maxDrawdown",
+    label: "Max DD",
+    get: (r) => -(r.stats?.maxDrawdownPct ?? Infinity),
+    render: (r) =>
+      r.stats ? <span className="num text-warn">{r.stats.maxDrawdownPct}%</span> : dash,
+  },
+  {
+    key: "profitFactor",
+    label: "Profit factor",
+    get: (r) => r.stats?.profitFactor ?? -Infinity,
+    render: (r) =>
+      r.stats ? <span className="num">{r.stats.profitFactor.toFixed(2)}</span> : dash,
+  },
+  {
+    key: "rtd",
+    label: "Return / DD",
+    get: rtd,
+    render: (r) => (r.stats ? <span className="num text-primary">{rtd(r).toFixed(2)}</span> : dash),
+  },
+  {
+    key: "riskScore",
+    label: "Risk score",
+    get: (r) => -(r.stats?.riskScore ?? Infinity),
+    render: (r) => (r.stats ? <span className="num">{r.stats.riskScore}/10</span> : dash),
+  },
+  {
+    key: "avgWin",
+    label: "Avg win",
+    get: (r) => r.stats?.avgWin ?? -Infinity,
+    render: (r) =>
+      r.stats ? <span className="num text-long">{fmtMoney(r.stats.avgWin)}</span> : dash,
+  },
+  {
+    key: "avgLoss",
+    label: "Avg loss",
+    get: (r) => r.stats?.avgLoss ?? Infinity,
+    render: (r) =>
+      r.stats ? <span className="num text-short">{fmtMoney(r.stats.avgLoss)}</span> : dash,
+  },
+  {
+    key: "winRate",
+    label: "Win rate",
+    get: (r) => r.stats?.winRate ?? -Infinity,
+    render: (r) => (r.stats ? <span className="num">{r.stats.winRate}%</span> : dash),
+  },
+  {
+    key: "closedTrades",
+    label: "Trades",
+    get: (r) => r.stats?.closedTrades ?? -Infinity,
+    render: (r) =>
+      r.stats ? <span className="num">{r.stats.closedTrades.toLocaleString()}</span> : dash,
+  },
+  {
+    key: "trackRecordMonths",
+    label: "Track record",
+    get: (r) => r.stats?.trackRecordMonths ?? -Infinity,
+    render: (r) => (r.stats ? <span className="num">{r.stats.trackRecordMonths}mo</span> : dash),
+  },
 ];
 
 function Leaderboard() {
@@ -73,8 +139,7 @@ function Leaderboard() {
   const [asc, setAsc] = useState(false);
 
   const { data: masters = [] } = useMastersDirectory();
-  const accountIds = useMemo(() => masters.map((m) => m.account_id), [masters]);
-  const statsMap = useMastersStats(accountIds);
+  const statsMap = useMastersStats(masters);
 
   const rows = useMemo<Row[]>(() => {
     const col = COLS.find((c) => c.key === sortKey) ?? COLS[0]!;
@@ -97,7 +162,9 @@ function Leaderboard() {
               <Avatar name={m.display_name ?? "Master"} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="truncate font-semibold">{m.display_name ?? "Unnamed master"}</span>
+                  <span className="truncate font-semibold">
+                    {m.display_name ?? "Unnamed master"}
+                  </span>
                   {i === 0 && <Crown className="h-3.5 w-3.5 text-warn" />}
                 </div>
                 <div className="truncate text-xs text-muted-foreground">
@@ -106,9 +173,36 @@ function Leaderboard() {
               </div>
             </div>
             <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-              <Mini label="ROI" node={stats ? <PnL value={stats.roiPct} prefix="" suffix="%" digits={1} className="text-sm" /> : dash} />
-              <Mini label="PF" node={stats ? <span className="num text-sm">{stats.profitFactor.toFixed(2)}</span> : dash} />
-              <Mini label="DD" node={stats ? <span className="num text-sm text-warn">{stats.maxDrawdownPct}%</span> : dash} />
+              <Mini
+                label="ROI"
+                node={
+                  stats ? (
+                    <PnL value={stats.roiPct} prefix="" suffix="%" digits={1} className="text-sm" />
+                  ) : (
+                    dash
+                  )
+                }
+              />
+              <Mini
+                label="PF"
+                node={
+                  stats ? (
+                    <span className="num text-sm">{stats.profitFactor.toFixed(2)}</span>
+                  ) : (
+                    dash
+                  )
+                }
+              />
+              <Mini
+                label="DD"
+                node={
+                  stats ? (
+                    <span className="num text-sm text-warn">{stats.maxDrawdownPct}%</span>
+                  ) : (
+                    dash
+                  )
+                }
+              />
             </div>
           </div>
         ))}
@@ -165,10 +259,16 @@ function Leaderboard() {
                   >
                     <Avatar name={r.master.display_name ?? "Master"} size={28} />
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-medium">{r.master.display_name ?? "Unnamed master"}</div>
-                      <div className="truncate text-[11px] text-muted-foreground">{r.master.bio || "No bio provided"}</div>
+                      <div className="truncate text-sm font-medium">
+                        {r.master.display_name ?? "Unnamed master"}
+                      </div>
+                      <div className="truncate text-[11px] text-muted-foreground">
+                        {r.master.bio || "No bio provided"}
+                      </div>
                     </div>
-                    <Badge variant="outline" className="ml-1 shrink-0 text-[10px]">{r.master.platform ?? "—"}</Badge>
+                    <Badge variant="outline" className="ml-1 shrink-0 text-[10px]">
+                      {r.master.platform ?? "—"}
+                    </Badge>
                   </Link>
                 </TableCell>
                 {COLS.map((c) => (
